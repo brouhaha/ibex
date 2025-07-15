@@ -29,6 +29,15 @@ The XPL0 programming language was created by Peter J.R. Boyle, as was the
 Apex operating system. The command interpreter ("executive") of Apex, as
 well as many of the provided utility programs, were written in XPL0.
 
+## 6502 simulation code
+
+The simulation code has been written from scratch in C++. Currently only
+the documented opcodes of the NMOS 6502 are simulated. Attempt to execute
+an undocumented opcode will throw an exception, exiting the program.
+
+The simulation code has been tested against [Klaus Dorman's 6502 instruction
+set test suite](https://github.com/Klaus2m5/6502_65C02_functional_tests).
+
 ## Building ibex
 
 Ibex requires the
