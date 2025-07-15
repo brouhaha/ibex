@@ -31,6 +31,7 @@ protected:
 
   bool m_output_open;
   std::ofstream m_output_file;
+  bool m_prev_out_was_cr;
 };
 using ApexPrinterDeviceSP = std::shared_ptr<ApexPrinterDevice>;
 

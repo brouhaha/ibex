@@ -14,7 +14,8 @@ std::shared_ptr<ApexPrinterDevice> ApexPrinterDevice::create()
 }
 
 ApexPrinterDevice::ApexPrinterDevice():
-  m_output_open(false)
+  m_output_open(false),
+  m_prev_out_was_cr(false)
 {
 }
 
@@ -51,9 +52,24 @@ bool ApexPrinterDevice::output_byte(CPU6502Registers& registers)
     return false;
   }
   std::uint8_t c = registers.a;
-  if (c == '\r')
+  if (m_prev_out_was_cr)
   {
-    c = '\n';
+    if (c == '\n')
+    {
+      return true;
+    }
+    else if (c != '\r')
+    {
+      m_prev_out_was_cr = false;
+    }
+  }
+  else
+  {
+    if (c == '\r')
+    {
+      c = '\n';
+      m_prev_out_was_cr = true;
+    }
   }
   m_output_file.write(reinterpret_cast<char*>(& c), 1);
   return true;

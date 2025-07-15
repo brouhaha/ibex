@@ -11,7 +11,8 @@ ApexConsoleDeviceSP ApexConsoleDevice::create()
   return ApexConsoleDeviceSP(p);
 }
 
-ApexConsoleDevice::ApexConsoleDevice()
+ApexConsoleDevice::ApexConsoleDevice():
+  m_prev_out_was_cr(false)
 {
 }
 
@@ -40,9 +41,24 @@ bool ApexConsoleDevice::input_byte(CPU6502Registers& registers)
 bool ApexConsoleDevice::output_byte(CPU6502Registers& registers)
 {
   char c = registers.a;
-  if (c == '\r')
+  if (m_prev_out_was_cr)
   {
-    c = '\n';
+    if (c == '\n')
+    {
+      return true;
+    }
+    else if (c != '\r')
+    {
+      m_prev_out_was_cr = false;
+    }
+  }
+  else
+  {
+    if (c == '\r')
+    {
+      c = '\n';
+      m_prev_out_was_cr = true;
+    }
   }
   std::cout << c;
   return true;

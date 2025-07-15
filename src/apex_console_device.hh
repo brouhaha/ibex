@@ -20,8 +20,11 @@ public:
   bool input_byte(CPU6502Registers& registers) override;
   bool output_byte(CPU6502Registers& registers) override;
   bool close(CPU6502Registers& registers) override;
+
 protected:
   ApexConsoleDevice();
+
+  bool m_prev_out_was_cr;
 };
 using ApexConsoleDeviceSP = std::shared_ptr<ApexConsoleDevice>;
 
