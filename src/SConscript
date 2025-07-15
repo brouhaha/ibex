@@ -1,0 +1,52 @@
+# Copyright 2025 Eric Smith
+# SPDX-License-Identifier: GPL-3.0-only
+
+from dataclasses import dataclass, field
+from typing import Optional
+
+Import('env')
+
+OPTIMIZE = False
+DEBUG = True
+
+cxxflags = ['--std=c++23', '-Wall', '-Wextra', '-Werror', '-pedantic', '-g']
+if OPTIMIZE:
+    cxxflags.append(['-O2'])
+if DEBUG:
+    cxxflags.append(['-g'])
+
+env.Append(CXXFLAGS = cxxflags)
+
+libs = ['boost_program_options']
+
+env.Append(LIBS = libs)
+
+
+@dataclass
+class ProgInfo:
+    name: str
+    srcs: list[str]
+
+def build_prog(prog_info):
+    objs = [env.Object(src)[0] for src in prog_info.srcs]
+    return env.Program(prog_info.name, objs)[0]
+
+
+prog_infos = [ProgInfo('ibex',
+                       ['apex.cc',
+                        'apex_console_device_posix.cc',
+                        'apex_file_byte_device.cc',
+                        'apex_printer_device.cc',
+                        'cpu6502.cc',
+                        'ibex.cc',
+                        'instruction_set.cc',
+                        'utility.cc',
+                        'memory.cc'])]
+
+progs = [build_prog(prog_info) for prog_info in prog_infos]
+
+env.Default(progs)
+
+# Local Variables:
+# mode: python
+# End:
