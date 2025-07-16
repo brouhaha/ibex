@@ -14,6 +14,26 @@ ApexCharacterDevice::ApexCharacterDevice()
 {
 }
 
+bool ApexCharacterDevice::open_for_input([[maybe_unused]] CPU6502Registers& registers)
+{
+  return true;
+}
+
+bool ApexCharacterDevice::open_for_output([[maybe_unused]] CPU6502Registers& registers)
+{
+  return true;
+}
+
+bool ApexCharacterDevice::input_byte_available([[maybe_unused]] CPU6502Registers& registers)
+{
+  return false;
+}
+
+bool ApexCharacterDevice::close([[maybe_unused]] CPU6502Registers& registers)
+{
+  return true;
+}
+
 ApexNullDeviceSP ApexNullDevice::create()
 {
   auto p = new ApexNullDevice();
@@ -22,16 +42,6 @@ ApexNullDeviceSP ApexNullDevice::create()
 
 ApexNullDevice::ApexNullDevice()
 {
-}
-
-bool ApexNullDevice::open_for_input([[maybe_unused]] CPU6502Registers& registers)
-{
-  return true;
-}
-
-bool ApexNullDevice::open_for_output([[maybe_unused]] CPU6502Registers& registers)
-{
-  return true;
 }
 
 bool ApexNullDevice::input_byte(CPU6502Registers& registers)
@@ -45,12 +55,6 @@ bool ApexNullDevice::output_byte([[maybe_unused]] CPU6502Registers& registers)
   // discard
   return true;
 }
-
-bool ApexNullDevice::close([[maybe_unused]] CPU6502Registers& registers)
-{
-  return true;
-}
-
 
 std::shared_ptr<Apex> Apex::create(MemorySP memory_sp)
 {
@@ -143,6 +147,13 @@ void Apex::khand([[maybe_unused]] CPU6502Registers& registers)
       return;
     case 0x0c:
       registers.set(CPU6502Registers::Flag::C, ! m_character_devices[nowdev]->close(registers));
+      return;
+    case 0x0f:
+      if (nowdev > 1)
+      {
+	break;
+      }
+      registers.set(CPU6502Registers::Flag::C, ! m_character_devices[nowdev]->input_byte_available(registers));
       return;
     }
   }

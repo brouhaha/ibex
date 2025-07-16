@@ -16,14 +16,11 @@ ApexConsoleDevice::ApexConsoleDevice():
 {
 }
 
-bool ApexConsoleDevice::open_for_input([[maybe_unused]] CPU6502Registers& registers)
+bool ApexConsoleDevice::input_byte_available([[maybe_unused]] CPU6502Registers& registers)
 {
-  return true;
-}
-
-bool ApexConsoleDevice::open_for_output([[maybe_unused]] CPU6502Registers& registers)
-{
-  return true;
+  return false;
+  // XXX to implement this, we have to switch from
+  // C++ io streams to Posix FDs, and use select() or poll().
 }
 
 bool ApexConsoleDevice::input_byte(CPU6502Registers& registers)
@@ -61,10 +58,5 @@ bool ApexConsoleDevice::output_byte(CPU6502Registers& registers)
     }
   }
   std::cout << c;
-  return true;
-}
-
-bool ApexConsoleDevice::close([[maybe_unused]] CPU6502Registers& registers)
-{
   return true;
 }

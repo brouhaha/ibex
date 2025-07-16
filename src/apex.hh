@@ -17,11 +17,12 @@
 class ApexCharacterDevice
 {
 public:
-  virtual bool open_for_input(CPU6502Registers& registers) = 0;
-  virtual bool open_for_output(CPU6502Registers& registers) = 0;
+  virtual bool open_for_input(CPU6502Registers& registers);
+  virtual bool open_for_output(CPU6502Registers& registers);
+  virtual bool input_byte_available(CPU6502Registers& registers);
   virtual bool input_byte(CPU6502Registers& registers) = 0;
   virtual bool output_byte(CPU6502Registers& registers) = 0;
-  virtual bool close(CPU6502Registers& registers) = 0;
+  virtual bool close(CPU6502Registers& registers);
 protected:
   ApexCharacterDevice();
 };
@@ -31,11 +32,8 @@ class ApexNullDevice: public ApexCharacterDevice
 {
 public:
   static std::shared_ptr<ApexNullDevice> create();
-  bool open_for_input(CPU6502Registers& registers) override;
-  bool open_for_output(CPU6502Registers& registers) override;
   bool input_byte(CPU6502Registers& registers) override;
   bool output_byte(CPU6502Registers& registers) override;
-  bool close(CPU6502Registers& registers) override;
 protected:
   ApexNullDevice();
 };
