@@ -97,9 +97,13 @@ public:
     EXECUT = 0x5d,  // 1        zero if exec mode is on
     LOWER  = 0x5e,  // 1        lower case switch (0 = upper)
 
+    ERRDEV = 0x5f,  // 1        error device number
+    ERRNUM = 0x60,  // 1        device handler error number
     LINPTR = 0x61,  // 1        "real" input line pointer of handler ($ff = null)
                     //          I2L uses this but calls it LINIDX
-    
+    SAVBLK = 0x62,  // 2        disk driver aux word
+    LOKMSK = 0x64,  // 1        disk driver locked units mask
+    CONHOR = 0x65,  //          console horizontal width, characters per line
 
     // I/O information block for unit drivers
     UNIT   = 0x68,  // 1        current unit number
@@ -133,6 +137,8 @@ public:
     KRESTD = 0xdf,  // 3 (JMP)  reset disk driver
     KREAD  = 0xe2,  // 3 (JMP)  read contiguous disk blocks
     KWRITE = 0xe5,  // 3 (JMP)  write contiguous disk blocks
+
+    KSSPND = 0xfd,  // 3        suspend
   };
 
   static constexpr Memory::Address VECTOR_START = SYS_PAGE_ADDRESS + SysPageOffsets::KRENTR;
