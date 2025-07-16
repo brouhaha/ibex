@@ -220,7 +220,7 @@ void CPU6502::execute_ADC(std::uint16_t ea,
   {
     // see US patent 3,991,307, Integrated circuit microprocessor with
     // parallel binary adder having on-the-fly correction to provide
-    // decimal results, Charles Ingerhm Peddle et al.
+    // decimal results, Charles Ingerham Peddle et al.
     std::uint8_t result_4_bit = (registers.a & 0x0f) + (operand & 0x0f) + carry_in;
     bool carry_4 = result_4_bit >> 4;
     if (carry_4)
@@ -706,9 +706,7 @@ void CPU6502::execute_SBC(std::uint16_t ea,
   }
   else
   {
-    // see US patent 3,991,307, Integrated circuit microprocessor with
-    // parallel binary adder having on-the-fly correction to provide
-    // decimal results, Charles Ingerhm Peddle et al.
+    // see decimal mode comments in execute_ADC()
     std::uint8_t result_4_bit = (registers.a & 0x0f) + (operand & 0x0f) + carry_in;
     bool carry_4 = result_4_bit >> 4;
     if (! carry_4)
