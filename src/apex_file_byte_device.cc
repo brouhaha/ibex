@@ -16,6 +16,7 @@ std::shared_ptr<ApexFileByteDevice> ApexFileByteDevice::create()
 ApexFileByteDevice::ApexFileByteDevice():
   m_input_open(false),
   m_input_binary_mode(false),
+  m_input_at_eof(false),
   m_output_open(false),
   m_output_binary_mode(false)
 {
@@ -49,6 +50,7 @@ bool ApexFileByteDevice::open_for_input([[maybe_unused]] CPU6502Registers& regis
 {
   m_input_file.seekg(0);  // rewind
   m_input_open = true;
+  m_input_at_eof = false;
   return true;
 }
 
@@ -64,8 +66,18 @@ bool ApexFileByteDevice::input_byte(CPU6502Registers& registers)
   {
     return false;
   }
+  if (m_input_at_eof)
+  {
+    registers.a = 0x1a;
+    return true;
+  }
   std::uint8_t c;
   m_input_file.read(reinterpret_cast<char*>(& c), 1);
+  if (m_input_file.eof())
+  {
+    registers.a = 0x1a;
+    return true;
+  }
   if (! m_input_binary_mode)
   {
     if (c == '\n')
