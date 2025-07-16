@@ -39,7 +39,8 @@ std::ostream& operator<<(std::ostream& os, const CPU6502Registers& reg);
 class CPU6502
 {
 public:
-  static std::shared_ptr<CPU6502> create(MemorySP memory_sp);
+  static std::shared_ptr<CPU6502> create(const InstructionSet::Sets& sets,
+					 MemorySP memory_sp);
   void set_trace(bool value);
   void execute_instruction();
   void execute_rts();
@@ -53,7 +54,8 @@ public:
   static constexpr Memory::Address NMI_VECTOR = 0xfffa;
 
 private:
-  CPU6502(MemorySP memory_sp);
+  CPU6502(const InstructionSet::Sets& sets,
+	  MemorySP memory_sp);
   std::uint16_t compute_effective_address(InstructionSet::Mode mode);
   void stack_push(std::uint8_t byte);
   std::uint8_t stack_pop();

@@ -51,15 +51,17 @@ std::ostream& operator<<(std::ostream& os, const CPU6502Registers& reg)
 }
 
 
-std::shared_ptr<CPU6502> CPU6502::create(MemorySP memory_sp)
+std::shared_ptr<CPU6502> CPU6502::create(const InstructionSet::Sets& sets,
+					 MemorySP memory_sp)
 {
-  auto p = new CPU6502(memory_sp);
+  auto p = new CPU6502(sets, memory_sp);
   return std::shared_ptr<CPU6502>(p);
 }
 
-CPU6502::CPU6502(MemorySP memory_sp):
+CPU6502::CPU6502(const InstructionSet::Sets& sets,
+		 MemorySP memory_sp):
   m_memory_sp(memory_sp),
-  m_instruction_set_sp(InstructionSet::create()),
+  m_instruction_set_sp(InstructionSet::create(sets)),
   m_trace(false)
 {
 }
@@ -135,6 +137,11 @@ std::uint16_t CPU6502::compute_effective_address(InstructionSet::Mode mode)
     ea = m_memory_sp->read_8(registers.pc++);
     ea = (ea + registers.y) & 0xff;
     break;
+  case ZP_IND:  // CMOS
+    temp_addr = m_memory_sp->read_8(registers.pc++);
+    ea = m_memory_sp->read_8(temp_addr);
+    ea |= (m_memory_sp->read_8((temp_addr + 1) & 0xff) << 8);
+    break;
   case ZP_X_IND:
     temp_addr = m_memory_sp->read_8(registers.pc++);
     temp_addr = (temp_addr + registers.x) & 0xff;
@@ -164,10 +171,24 @@ std::uint16_t CPU6502::compute_effective_address(InstructionSet::Mode mode)
   case ABSOLUTE_IND:
     temp_addr = m_memory_sp->read_16_le(registers.pc);
     registers.pc += 2;
-    // NMOS 6502 only increments low byte
     ea = m_memory_sp->read_8(temp_addr);
-    temp_addr = (temp_addr & 0xff00) | ((temp_addr + 1) & 0x00ff);
+    if (true)
+    {
+      // NMOS 6502 only increments low byte
+      temp_addr = (temp_addr & 0xff00) | ((temp_addr + 1) & 0x00ff);
+    }
+    else
+    {
+      // CMOS 6502 increments entire address
+      ++temp_addr;
+    }
     ea |= (m_memory_sp->read_8(temp_addr) << 8);
+    break;
+  case ABS_X_IND:  // CMOS
+    temp_addr = m_memory_sp->read_16_le(registers.pc);
+    registers.pc += 2;
+    temp_addr += registers.x;
+    ea = m_memory_sp->read_16_le(temp_addr);
     break;
   case RELATIVE:
     ea = m_memory_sp->read_8(registers.pc++);
@@ -176,6 +197,27 @@ std::uint16_t CPU6502::compute_effective_address(InstructionSet::Mode mode)
       ea |= 0xff00;
     }
     ea += registers.pc;
+    break;
+  case ZP_RELATIVE:  // Rockwell BBR, BBS
+    // XXX what are we going to do about having two
+    // effective addresses?
+    ea = m_memory_sp->read_8(registers.pc++);
+    // XXX
+    ea = m_memory_sp->read_8(registers.pc++);
+    if (ea & 0x80)
+    {
+      ea |= 0xff00;
+    }
+    ea += registers.pc;
+    break;
+  case RELATIVE_16:  // Commodore 65CE02
+    ea = m_memory_sp->read_16_le(registers.pc++);
+    ea += registers.pc;
+    break;
+  case ST_VEC_IND_Y:  // Commodore 65CE02
+    temp_addr = m_memory_sp->read_8(registers.pc++);
+    temp_addr += 0x0100 + registers.s;
+    ea = m_memory_sp->read_16_le(temp_addr);
     break;
   default:
     throw std::logic_error("unknown addressing mode");
@@ -808,6 +850,25 @@ const magic_enum::containers::array<InstructionSet::Inst, CPU6502::ExecutionFnPt
   & CPU6502::execute_ADC,
   & CPU6502::execute_AND,
   & CPU6502::execute_ASL,
+  nullptr, // & CPU6502::execute_ASR,
+  nullptr, // & CPU6502::execute_ASW,
+  nullptr, // & CPU6502::execute_AUG,
+  nullptr, // & CPU6502::execute_BBR0,
+  nullptr, // & CPU6502::execute_BBR1,
+  nullptr, // & CPU6502::execute_BBR2,
+  nullptr, // & CPU6502::execute_BBR3,
+  nullptr, // & CPU6502::execute_BBR4,
+  nullptr, // & CPU6502::execute_BBR5,
+  nullptr, // & CPU6502::execute_BBR6,
+  nullptr, // & CPU6502::execute_BBR7,
+  nullptr, // & CPU6502::execute_BBS0,
+  nullptr, // & CPU6502::execute_BBS1,
+  nullptr, // & CPU6502::execute_BBS2,
+  nullptr, // & CPU6502::execute_BBS3,
+  nullptr, // & CPU6502::execute_BBS4,
+  nullptr, // & CPU6502::execute_BBS5,
+  nullptr, // & CPU6502::execute_BBS6,
+  nullptr, // & CPU6502::execute_BBS7,
   & CPU6502::execute_BCC,
   & CPU6502::execute_BCS,
   & CPU6502::execute_BEQ,
@@ -815,50 +876,98 @@ const magic_enum::containers::array<InstructionSet::Inst, CPU6502::ExecutionFnPt
   & CPU6502::execute_BMI,
   & CPU6502::execute_BNE,
   & CPU6502::execute_BPL,
+  nullptr, // & CPU6502::execute_BRA,
   & CPU6502::execute_BRK,
+  nullptr, // & CPU6502::execute_BSR,
   & CPU6502::execute_BVC,
   & CPU6502::execute_BVS,
   & CPU6502::execute_CLC,
   & CPU6502::execute_CLD,
+  nullptr, // & CPU6502::execute_CLE,
   & CPU6502::execute_CLI,
   & CPU6502::execute_CLV,
   & CPU6502::execute_CMP,
   & CPU6502::execute_CPX,
   & CPU6502::execute_CPY,
+  nullptr, // & CPU6502::execute_CPZ,
   & CPU6502::execute_DEC,
+  nullptr, // & CPU6502::execute_DEW,
   & CPU6502::execute_DEX,
   & CPU6502::execute_DEY,
+  nullptr, // & CPU6502::execute_DEZ,
   & CPU6502::execute_EOR,
   & CPU6502::execute_INC,
+  nullptr, // & CPU6502::execute_INW,
   & CPU6502::execute_INX,
   & CPU6502::execute_INY,
+  nullptr, // & CPU6502::execute_INZ,
   & CPU6502::execute_JMP,
   & CPU6502::execute_JSR,
   & CPU6502::execute_LDA,
   & CPU6502::execute_LDX,
   & CPU6502::execute_LDY,
+  nullptr, // & CPU6502::execute_LDZ,
   & CPU6502::execute_LSR,
+  nullptr, // & CPU6502::execute_NEG,
   & CPU6502::execute_NOP,
   & CPU6502::execute_ORA,
   & CPU6502::execute_PHA,
   & CPU6502::execute_PHP,
+  nullptr, // & CPU6502::execute_PHW,
+  nullptr, // & CPU6502::execute_PHX,
+  nullptr, // & CPU6502::execute_PHY,
+  nullptr, // & CPU6502::execute_PHZ,
   & CPU6502::execute_PLA,
   & CPU6502::execute_PLP,
+  nullptr, // & CPU6502::execute_PHW,
+  nullptr, // & CPU6502::execute_PHX,
+  nullptr, // & CPU6502::execute_PHY,
+  nullptr, // & CPU6502::execute_PHZ,
+  nullptr, // & CPU6502::execute_RMB0,
+  nullptr, // & CPU6502::execute_RMB1,
+  nullptr, // & CPU6502::execute_RMB2,
+  nullptr, // & CPU6502::execute_RMB3,
+  nullptr, // & CPU6502::execute_RMB4,
+  nullptr, // & CPU6502::execute_RMB5,
+  nullptr, // & CPU6502::execute_RMB6,
+  nullptr, // & CPU6502::execute_RMB7,
   & CPU6502::execute_ROL,
   & CPU6502::execute_ROR,
+  nullptr, // & CPU6502::execute_ROW,
   & CPU6502::execute_RTI,
+  nullptr, // & CPU6502::execute_RTN,
   & CPU6502::execute_RTS,
   & CPU6502::execute_SBC,
   & CPU6502::execute_SEC,
   & CPU6502::execute_SED,
+  nullptr, // & CPU6502::execute_SEE,
   & CPU6502::execute_SEI,
+  nullptr, // & CPU6502::execute_SMB0,
+  nullptr, // & CPU6502::execute_SMB1,
+  nullptr, // & CPU6502::execute_SMB2,
+  nullptr, // & CPU6502::execute_SMB3,
+  nullptr, // & CPU6502::execute_SMB4,
+  nullptr, // & CPU6502::execute_SMB5,
+  nullptr, // & CPU6502::execute_SMB6,
+  nullptr, // & CPU6502::execute_SMB7,
   & CPU6502::execute_STA,
+  nullptr, // & CPU6502::execute_STP,
   & CPU6502::execute_STX,
   & CPU6502::execute_STY,
+  nullptr, // & CPU6502::execute_STZ,
+  nullptr, // & CPU6502::execute_TAB,
   & CPU6502::execute_TAX,
   & CPU6502::execute_TAY,
+  nullptr, // & CPU6502::execute_TAZ,
+  nullptr, // & CPU6502::execute_TBA,
+  nullptr, // & CPU6502::execute_TRB,
+  nullptr, // & CPU6502::execute_TSB,
   & CPU6502::execute_TSX,
+  nullptr, // & CPU6502::execute_TSY,
   & CPU6502::execute_TXA,
   & CPU6502::execute_TXS,
   & CPU6502::execute_TYA,
+  nullptr, // & CPU6502::execute_TYS,
+  nullptr, // & CPU6502::execute_TZA,
+  nullptr, // & CPU6502::execute_WAI,
 };

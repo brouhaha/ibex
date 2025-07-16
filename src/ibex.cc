@@ -16,6 +16,7 @@
 #include "apex_printer_device.hh"
 #include "apex_file_byte_device.hh"
 #include "cpu6502.hh"
+#include "instruction_set.hh"
 #include "memory.hh"
 
 
@@ -121,7 +122,7 @@ int main(int argc, char *argv[])
   }
 
   MemorySP memory_sp = Memory::create();
-  CPU6502SP cpu_sp = CPU6502::create(memory_sp);
+  CPU6502SP cpu_sp = CPU6502::create(InstructionSet::NMOS, memory_sp);
   ApexSP apex_sp = Apex::create(memory_sp);
 
   auto null_device_sp = ApexNullDevice::create();

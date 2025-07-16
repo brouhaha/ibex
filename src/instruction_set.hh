@@ -8,6 +8,7 @@
 
 #include <array>
 #include <cstdint>
+#include <iostream>
 #include <map>
 #include <memory>
 #include <string>
@@ -18,7 +19,25 @@
 class InstructionSet
 {
 public:
-  static std::shared_ptr<InstructionSet> create();
+  enum class Set
+  {
+    UNDEFINED,
+    BASE,
+    ROCKWELL,  // use with BASE - present on some Rockwell NMOS microcontrollers, e.g. R6500/13, R6511Q
+    CMOS,      // use with BASE
+    WDC_CMOS,  // use with CMOS | ROCKWELL
+    CBM_CMOS,  // use with CMOS | ROCKWELL
+  };
+  using Sets = magic_enum::containers::bitset<Set>;
+
+  static constexpr Sets NMOS = Sets({ Set::BASE });
+  static constexpr Sets NMOS_ROCKWELL = Sets({ Set::BASE, Set::ROCKWELL });
+  static constexpr Sets CMOS = Sets({ Set::BASE, Set::CMOS });
+  static constexpr Sets CMOS_ROCKWELL = Sets({ Set::BASE, Set::CMOS, Set::ROCKWELL });
+  static constexpr Sets CMOS_WDC = Sets({ Set::BASE, Set::CMOS, Set::ROCKWELL, Set::WDC_CMOS });
+  static constexpr Sets CMOS_CBM = Sets({ Set::BASE, Set::CMOS, Set::ROCKWELL, Set::CBM_CMOS });
+
+  static std::shared_ptr<InstructionSet> create(const Sets& sets = { Set::BASE });
 
   class UnrecognizedMnemonic: public std::runtime_error
   {
@@ -26,24 +45,27 @@ public:
     UnrecognizedMnemonic(const std::string& mnemonic);
   };
 
-  enum class Set
-  {
-    UNDEFINED,
-    BASE,
-    ROCKWELL,
-    CMOS,
-  };
-
   enum class Inst
   {
-    ADC, AND, ASL, BCC, BCS, BEQ, BIT, BMI,
-    BNE, BPL, BRK, BVC, BVS, CLC, CLD, CLI,
-    CLV, CMP, CPX, CPY, DEC, DEX, DEY, EOR,
-    INC, INX, INY, JMP, JSR, LDA, LDX, LDY,
-    LSR, NOP, ORA, PHA, PHP, PLA, PLP, ROL,
-    ROR, RTI, RTS, SBC, SEC, SED, SEI, STA,
-    STX, STY, TAX, TAY, TSX, TXA, TXS, TYA,
+    ADC,  AND,  ASL,  ASR,  ASW,  AUG,
+    BBR0, BBR1, BBR2, BBR3, BBR4, BBR5, BBR6, BBR7,
+    BBS0, BBS1, BBS2, BBS3, BBS4, BBS5, BBS6, BBS7,
+    BCC,  BCS,  BEQ,  BIT,  BMI,  BNE,  BPL,  BRA,
+    BRK,  BSR,  BVC,  BVS,  CLC,  CLD,  CLE,  CLI,
+    CLV,  CMP,  CPX,  CPY,  CPZ,  DEC,  DEW,  DEX,
+    DEY,  DEZ,  EOR,  INC,  INW,  INX,  INY,  INZ,
+    JMP,  JSR,  LDA,  LDX,  LDY,  LDZ,  LSR,  NEG,
+    NOP,  ORA,  PHA,  PHP,  PHW,  PHX,  PHY,  PHZ,
+    PLA,  PLP,  PLW,  PLX,  PLY,  PLZ,
+    RMB0, RMB1, RMB2, RMB3, RMB4, RMB5, RMB6, RMB7,
+    ROL,  ROR,  ROW,  RTI,  RTN,  RTS,  SBC,  SEC,
+    SED,  SEE,  SEI,
+    SMB0, SMB1, SMB2, SMB3, SMB4, SMB5, SMB6, SMB7,
+    STA,  STP,  STX,  STY,  STZ,  TAB,  TAX,  TAY,
+    TAZ,  TBA,  TRB,  TSB,  TSX,  TSY,  TXA,  TXS,
+    TYA,  TYS,  TZA,  WAI,
   };
+
 
   enum class Mode
   {
@@ -54,13 +76,18 @@ public:
     ZERO_PAGE,
     ZERO_PAGE_X,
     ZERO_PAGE_Y,
+    ZP_IND,         // CMOS
     ZP_X_IND,
     ZP_IND_Y,
     ABSOLUTE,
     ABSOLUTE_X,
     ABSOLUTE_Y,
     ABSOLUTE_IND,
+    ABS_X_IND,      // CMOS
     RELATIVE,
+    ZP_RELATIVE,    // Rockwell BBR, BBS
+    RELATIVE_16,    // Commodore 65CE02
+    ST_VEC_IND_Y,   // Commodore 65CE02
   };
 
   static std::uint32_t get_length(Mode mode);
@@ -74,6 +101,8 @@ public:
     std::uint8_t opcode;
   };
 
+  std::ostream& dump_opcodes(std::ostream& os);
+
   bool valid_mnemonic(const std::string& mnemonic) const;
 
   const std::vector<Info>& get(const std::string& mnemonic) const;
@@ -86,7 +115,7 @@ public:
   static bool pal65_compatible_modes(Mode m1, Mode m2);
 
 protected:
-  InstructionSet();
+  InstructionSet(const Sets& sets = { Set::BASE });
 
   std::array<const Info*, 0x100> m_by_opcode;
   std::map<std::string, std::vector<Info>> m_by_mnemonic;
