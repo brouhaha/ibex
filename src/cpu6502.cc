@@ -106,6 +106,10 @@ void CPU6502::execute_instruction()
 void CPU6502::execute_rts()
 {
   execute_RTS(0, 0);
+  if (m_trace)
+  {
+    std::cout << "--- " << registers << "\n";
+  }
 }
 
 std::uint16_t CPU6502::compute_effective_address(InstructionSet::Mode mode)
