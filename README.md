@@ -61,9 +61,19 @@ ibex is executed from a command line. There is a single mandatory
 positional argument to provides the name of the Apex executable
 (.SAV file) to be loaded and executed.
 
-Options may be used to specify files for disk input and output
+Command line ptions may be used to specify the executable format,
+files for disk input and output
 (Apex character device 3), and a file for printer output (Apex
 character device 2).
+
+* `-b` specfies that the executable is in ".BIN" format, rather than ".SAV"
+
+* `-i <filename>` specifies the disk input file
+
+* `-o <filename>` specifies the disk input file
+
+* `-l <filename>` specifies the printer output file
+
 
 The Apex asm65 assembler might be invoked to assemble a program foo by
 
@@ -71,11 +81,11 @@ The Apex asm65 assembler might be invoked to assemble a program foo by
 ibex asm65.sav -i foo.p65 -o foo.bin -l foo.lst
 ```
 
-The `-i` option specifies the disk input file.
+The resulting foo.bin could be executed by
 
-The `-o` option specifies the disk input file.
-
-The `-l` option specifies the printer output file.
+```
+ibex -b foo.bin
+```
 
 ## Limitations
 

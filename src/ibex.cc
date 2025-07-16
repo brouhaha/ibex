@@ -58,6 +58,8 @@ void conflicting_options(const boost::program_options::variables_map& vm,
 
 int main(int argc, char *argv[])
 {
+  bool executable_in_bin_format;
+
   std::string executable_fn;
 
   bool open_input_file = false;
@@ -74,6 +76,7 @@ int main(int argc, char *argv[])
     po::options_description gen_opts("Options");
     gen_opts.add_options()
       ("help",                                           "output help message")
+      ("bin,b",                                          "executable is in BIN format")
       ("input,i",   po::value<std::string>(&input_fn),   "input file")
       ("output,o",  po::value<std::string>(&output_fn),  "output file")
       ("printer,p", po::value<std::string>(&printer_fn), "printer file");
@@ -105,6 +108,8 @@ int main(int argc, char *argv[])
       std::cout << "executable file must be specified\n";
       std::exit(1);
     }
+    executable_in_bin_format = vm.count("bin") != 0;
+
     open_input_file = vm.count("input");
     open_output_file = vm.count("output");
     open_printer_file = vm.count("printer");
@@ -147,7 +152,14 @@ int main(int argc, char *argv[])
   cpu_sp->registers.clear(CPU6502Registers::Flag::D);
 
   apex_sp->init();
-  memory_sp->load_apex_sav(executable_fn);
+  if (executable_in_bin_format)
+  {
+    memory_sp->load_apex_bin(executable_fn);
+  }
+  else
+  {
+    memory_sp->load_apex_sav(executable_fn);
+  }
 
   cpu_sp->registers.pc = Apex::SYS_PAGE_ADDRESS + Apex::SysPageOffsets::VSTART;
   cpu_sp->registers.a = 0x00;
