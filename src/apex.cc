@@ -65,6 +65,10 @@ Apex::Apex(MemorySP memory_sp):
 
 void Apex::init()
 {
+  m_memory_sp->write_8(SYS_PAGE_ADDRESS + SysPageOffsets::LINIDX, 0xff);
+  // for unknown reasons, I2L uses the console device handler LINPTR,
+  // but calls it LINIDX
+  m_memory_sp->write_8(SYS_PAGE_ADDRESS + SysPageOffsets::LINPTR, 0xff);
 }
 
 void Apex::install_character_device(unsigned device_number, ApexCharacterDeviceSP device)
@@ -78,7 +82,7 @@ void Apex::install_character_device(unsigned device_number, ApexCharacterDeviceS
 
 void Apex::vector_exec(CPU6502Registers& registers)
 {
-  switch (registers.pc - SYSPAG_ADDRESS)
+  switch (registers.pc - SYS_PAGE_ADDRESS)
   {
   case KRENTR: krentr(registers); break;
   case KSAVER: ksaver(registers); break;
@@ -119,7 +123,7 @@ void Apex::khand([[maybe_unused]] CPU6502Registers& registers)
   // arguments, if any, in A & Y
 
   std::uint8_t function = registers.x;
-  std::uint8_t nowdev = m_memory_sp->read_8(SYSPAG_ADDRESS + SysPagOffsets::NOWDEV);
+  std::uint8_t nowdev = m_memory_sp->read_8(SYS_PAGE_ADDRESS + SysPageOffsets::NOWDEV);
 
   if (m_character_devices[nowdev])
   {

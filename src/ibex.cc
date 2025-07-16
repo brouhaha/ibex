@@ -149,8 +149,7 @@ int main(int argc, char *argv[])
   apex_sp->init();
   memory_sp->load_apex_sav(executable_fn);
 
-
-  cpu_sp->registers.pc = Apex::SYSPAG_ADDRESS + Apex::SysPagOffsets::VSTART;
+  cpu_sp->registers.pc = Apex::SYS_PAGE_ADDRESS + Apex::SysPageOffsets::VSTART;
   cpu_sp->registers.a = 0x00;
   cpu_sp->registers.x = 0x00;
   cpu_sp->registers.y = 0x00;

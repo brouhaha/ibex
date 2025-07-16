@@ -54,12 +54,12 @@ public:
   void handler_exec(CPU6502Registers& registers); // emulate an Apex I/O handler
 
   static constexpr std::size_t PAGE_SIZE = 0x100;
-  static constexpr Memory::Address SYSPAG_ADDRESS = 0xbf00;
-  static constexpr std::size_t SYSPAG_PROGRAM_AREA_SIZE = 0x50;
+  static constexpr Memory::Address SYS_PAGE_ADDRESS = 0xbf00;
+  static constexpr std::size_t SYS_PAGE_PROGRAM_AREA_SIZE = 0x50;
 
   static constexpr std::uint8_t EOF_CHARACTER = 0x1a;  // AKA control-Z, ASCII SUB
 
-  enum SysPagOffsets: Memory::Address
+  enum SysPageOffsets: Memory::Address
   {
     // offsets 0x00 through 0x4f belong to the program
 
@@ -97,6 +97,10 @@ public:
     EXECUT = 0x5d,  // 1        zero if exec mode is on
     LOWER  = 0x5e,  // 1        lower case switch (0 = upper)
 
+    LINPTR = 0x61,  // 1        "real" input line pointer of handler ($ff = null)
+                    //          I2L uses this but calls it LINIDX
+    
+
     // I/O information block for unit drivers
     UNIT   = 0x68,  // 1        current unit number
     BLKNO  = 0x69,  // 2        current block number
@@ -112,11 +116,11 @@ public:
     OTDEV  = 0x76,  // 1        unit number of output file
 
     // input file information
-    INLBLK = 0x70,  // 2        first block of input file
-    INHBLK = 0x72,  // 2        last block of input file
-    INFLG  = 0x74,  // 1        status flags
-    INNO   = 0x75,  // 1        directory number of input file
-    INDEV  = 0x76,  // 1        unit number of input file
+    INLBLK = 0x78,  // 2        first block of input file
+    INHBLK = 0x7a,  // 2        last block of input file
+    INFLG  = 0x7c,  // 1        status flags
+    INNO   = 0x7d,  // 1        directory number of input file
+    INDEV  = 0x7e,  // 1        unit number of input file
 
     DRVTAB = 0xc0,  // 16       8 pointers to I/O device handlers
 
@@ -131,8 +135,8 @@ public:
     KWRITE = 0xe5,  // 3 (JMP)  write contiguous disk blocks
   };
 
-  static constexpr Memory::Address VECTOR_START = SYSPAG_ADDRESS + SysPagOffsets::KRENTR;
-  static constexpr Memory::Address VECTOR_END   = SYSPAG_ADDRESS + SysPagOffsets::KWRITE + 3;
+  static constexpr Memory::Address VECTOR_START = SYS_PAGE_ADDRESS + SysPageOffsets::KRENTR;
+  static constexpr Memory::Address VECTOR_END   = SYS_PAGE_ADDRESS + SysPageOffsets::KWRITE + 3;
 
   static constexpr unsigned MAX_CHAR_DEVICE = 8;
 

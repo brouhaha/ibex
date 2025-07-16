@@ -155,10 +155,10 @@ void Memory::load_apex_sav(const std::filesystem::path& save_filename)
     if (first_page)
     {
       // copy first part of first page of SAV file to program area in SYSPAG
-      std::copy(page.begin(), page.begin() + Apex::SYSPAG_PROGRAM_AREA_SIZE, m_memory.begin() + Apex::SYSPAG_ADDRESS);
+      std::copy(page.begin(), page.begin() + Apex::SYS_PAGE_PROGRAM_AREA_SIZE, m_memory.begin() + Apex::SYS_PAGE_ADDRESS);
       // copy remainder of first page to zero page
-      std::copy(page.begin() + Apex::SYSPAG_PROGRAM_AREA_SIZE, page.end(), m_memory.begin() + Apex::SYSPAG_PROGRAM_AREA_SIZE);
-      address = read_16_le(Apex::SYSPAG_ADDRESS + Apex::SysPagOffsets::USRMEM);
+      std::copy(page.begin() + Apex::SYS_PAGE_PROGRAM_AREA_SIZE, page.end(), m_memory.begin() + Apex::SYS_PAGE_PROGRAM_AREA_SIZE);
+      address = read_16_le(Apex::SYS_PAGE_ADDRESS + Apex::SysPageOffsets::USRMEM);
       std::cerr << std::format("loading at {:04x}\n", address);
       first_page = false;
     }

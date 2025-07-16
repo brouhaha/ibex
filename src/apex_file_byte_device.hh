@@ -34,6 +34,7 @@ protected:
 
   bool m_input_open;
   bool m_input_binary_mode;
+  bool m_input_prev_cr;
   bool m_input_at_eof;
   std::ifstream m_input_file;
 

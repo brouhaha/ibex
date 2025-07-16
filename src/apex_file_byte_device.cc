@@ -16,6 +16,7 @@ std::shared_ptr<ApexFileByteDevice> ApexFileByteDevice::create()
 ApexFileByteDevice::ApexFileByteDevice():
   m_input_open(false),
   m_input_binary_mode(false),
+  m_input_prev_cr(false),
   m_input_at_eof(false),
   m_output_open(false),
   m_output_binary_mode(false)
@@ -62,6 +63,14 @@ bool ApexFileByteDevice::open_for_output([[maybe_unused]] CPU6502Registers& regi
 
 bool ApexFileByteDevice::input_byte(CPU6502Registers& registers)
 {
+  if (m_input_prev_cr)
+  {
+    // previously encountered an LF and passed program an CR,
+    // so now provide the LF
+    registers.a = 0x0a;
+    m_input_prev_cr = false;
+    return true;
+  }
   if (! m_input_open)
   {
     return false;
@@ -83,6 +92,7 @@ bool ApexFileByteDevice::input_byte(CPU6502Registers& registers)
     if (c == '\n')
     {
       c = '\r';
+      m_input_prev_cr = true;  // provide an LF on next call
     }
   }
   registers.a = c;
@@ -110,6 +120,12 @@ bool ApexFileByteDevice::output_byte(CPU6502Registers& registers)
 bool ApexFileByteDevice::close([[maybe_unused]] CPU6502Registers& registers)
 {
   m_input_open = false;
+
+  if (m_output_open)
+  {
+    m_output_file.close();
+  }
   m_output_open = false;
+
   return true;
 }
