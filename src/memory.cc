@@ -14,13 +14,14 @@
 #include "memory.hh"
 #include "utility.hh"
 
-std::shared_ptr<Memory> Memory::create()
+std::shared_ptr<Memory> Memory::create(std::size_t size)
 {
-  auto p = new Memory();
+  auto p = new Memory(size);
   return std::shared_ptr<Memory>(p);
 }
 
-Memory::Memory():
+Memory::Memory(std::size_t size):
+  m_memory(size),
   m_trace(false)
 {
 }
@@ -57,7 +58,7 @@ void Memory::load_raw_bin(const std::filesystem::path& object_filename,
       throw std::runtime_error("error reading object file");
     }
     length++;
-    m_memory[load_address++] = static_cast<std::uint8_t>(c);
+    m_memory.at(load_address++) = static_cast<std::uint8_t>(c);
   }
   
   std::cerr << std::format("loaded {} (0x{:04x}) bytes\n", length, length);
@@ -123,7 +124,7 @@ void Memory::load_apex_bin(const std::filesystem::path& object_filename)
       {
 	throw std::runtime_error("object file doesn't start with address");
       }
-      m_memory[address++] = value;
+      m_memory.at(address++) = value;
       digit_count = 0;
       value = 0;
     }
@@ -174,12 +175,12 @@ void Memory::load_apex_sav(const std::filesystem::path& save_filename)
 
 Memory::Data Memory::read_8(Address addr)
 {
-  return m_memory[addr];
+  return m_memory.at(addr);
 }
 
 std::uint16_t Memory::read_16_le(Address addr)
 {
-  return m_memory[addr] | (m_memory[addr + 1] << 8);
+  return m_memory.at(addr) | (m_memory.at(addr + 1) << 8);
 }
 
 void Memory::write_8(Address addr, Data data)
@@ -188,11 +189,11 @@ void Memory::write_8(Address addr, Data data)
   {
     std::cout << std::format("    wrote addr {:04x} data {:02x}\n", addr, data);
   }
-  m_memory[addr] = data;
+  m_memory.at(addr) = data;
 }
 
 void Memory::write_16_le(Address addr, std::uint16_t data)
 {
-  m_memory[addr]     = data & 0xff;
-  m_memory[addr + 1] = data >> 8;
+  m_memory.at(addr)     = data & 0xff;
+  m_memory.at(addr + 1) = data >> 8;
 }

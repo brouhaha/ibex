@@ -25,17 +25,19 @@ public:
     BASE,
     ROCKWELL,  // use with BASE - present on some Rockwell NMOS microcontrollers, e.g. R6500/13, R6511Q
     CMOS,      // use with BASE
-    WDC_CMOS,  // use with CMOS | ROCKWELL
-    CBM_CMOS,  // use with CMOS | ROCKWELL
+    WDC_CMOS,  // use with BASE | CMOS | ROCKWELL
+    WDC_16BIT, // use with BASE | CMOS
+    CBM_CMOS,  // use with BASE | CMOS | ROCKWELL
   };
   using Sets = magic_enum::containers::bitset<Set>;
 
-  static constexpr Sets NMOS = Sets({ Set::BASE });
-  static constexpr Sets NMOS_ROCKWELL = Sets({ Set::BASE, Set::ROCKWELL });
-  static constexpr Sets CMOS = Sets({ Set::BASE, Set::CMOS });
-  static constexpr Sets CMOS_ROCKWELL = Sets({ Set::BASE, Set::CMOS, Set::ROCKWELL });
-  static constexpr Sets CMOS_WDC = Sets({ Set::BASE, Set::CMOS, Set::ROCKWELL, Set::WDC_CMOS });
-  static constexpr Sets CMOS_CBM = Sets({ Set::BASE, Set::CMOS, Set::ROCKWELL, Set::CBM_CMOS });
+  static constexpr Sets CPU_6502      = Sets({ Set::BASE });
+  static constexpr Sets CPU_R6502     = Sets({ Set::BASE,            Set::ROCKWELL });
+  static constexpr Sets CPU_65C02     = Sets({ Set::BASE, Set::CMOS });
+  static constexpr Sets CPU_R65C02    = Sets({ Set::BASE, Set::CMOS, Set::ROCKWELL });
+  static constexpr Sets CPU_WDC65C02  = Sets({ Set::BASE, Set::CMOS, Set::ROCKWELL, Set::WDC_CMOS });
+  static constexpr Sets CPU_WDC65C816 = Sets({ Set::BASE, Set::CMOS,                Set::WDC_CMOS, Set::WDC_16BIT });
+  static constexpr Sets CPU_65CE02    = Sets({ Set::BASE, Set::CMOS, Set::ROCKWELL,                                Set::CBM_CMOS });
 
   static std::shared_ptr<InstructionSet> create(const Sets& sets = { Set::BASE });
 

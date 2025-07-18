@@ -6,19 +6,20 @@
 #ifndef MEMORY_HH
 #define MEMORY_HH
 
-#include <array>
 #include <cstdint>
 #include <filesystem>
 #include <memory>
+#include <vector>
 
 class Memory
 {
 public:
-  using Address = std::uint16_t;
+  using Address = std::uint32_t;
   using Data = std::uint8_t;
   static constexpr std::size_t APEX_PAGE_SIZE = 0x100;
 
-  static std::shared_ptr<Memory> create();
+  // typical size (1ull<<16) for 8-bit CPU, (1ull<<24) for 65C816
+  static std::shared_ptr<Memory> create(std::size_t size);
   
   void load_raw_bin(const std::filesystem::path& object_filename,
 		    Address load_address = 0x0000);
@@ -35,10 +36,10 @@ public:
   void write_16_le(Address addr, std::uint16_t data);
 
 protected:
-  Memory();
+  Memory(std::size_t size);
 
+  std::vector<std::uint8_t> m_memory;
   bool m_trace;
-  std::array<std::uint8_t, 0x10000> m_memory;
 };
 
 using MemorySP = std::shared_ptr<Memory>;

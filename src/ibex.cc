@@ -20,9 +20,6 @@
 #include "memory.hh"
 
 
-std::uint16_t test_load_address = 0x0000;
-std::uint16_t test_execution_address = 0x0400;
-
 bool skip_decimal_test = false;
 std::uint16_t test_patch_address = 0x3361;
 std::uint16_t test_patch_target_address = 0x345d;
@@ -57,11 +54,20 @@ void conflicting_options(const boost::program_options::variables_map& vm,
 }
 
 
+enum class ExecutableFormat
+{
+  APEX_SAV,
+  APEX_BIN,
+  RAW_BINARY,
+};
+
+
 int main(int argc, char *argv[])
 {
-  bool executable_in_bin_format;
-
+  ExecutableFormat executable_format = ExecutableFormat::APEX_SAV;
   std::string executable_fn;
+  std::uint16_t load_address = 0x0000;       // XXX need a command line argument
+  std::uint16_t execution_address = 0x0400;  // XXX need a command line argument
 
   bool open_input_file = false;
   std::string input_fn;
@@ -78,6 +84,7 @@ int main(int argc, char *argv[])
     gen_opts.add_options()
       ("help",                                           "output help message")
       ("bin,b",                                          "executable is in BIN format")
+      ("raw,r",                                          "executable is a raw binary file")
       ("input,i",   po::value<std::string>(&input_fn),   "input file")
       ("output,o",  po::value<std::string>(&output_fn),  "output file")
       ("printer,p", po::value<std::string>(&printer_fn), "printer file");
@@ -109,7 +116,15 @@ int main(int argc, char *argv[])
       std::cout << "executable file must be specified\n";
       std::exit(1);
     }
-    executable_in_bin_format = vm.count("bin") != 0;
+
+    if (vm.count("raw"))
+    {
+      executable_format = ExecutableFormat::RAW_BINARY;
+    }
+    else if (vm.count("bin"))
+    {
+      executable_format = ExecutableFormat::APEX_BIN;
+    }
 
     open_input_file = vm.count("input");
     open_output_file = vm.count("output");
@@ -121,8 +136,8 @@ int main(int argc, char *argv[])
     std::exit(1);
   }
 
-  MemorySP memory_sp = Memory::create();
-  CPU6502SP cpu_sp = CPU6502::create(InstructionSet::NMOS, memory_sp);
+  MemorySP memory_sp = Memory::create(1ull<<16);
+  CPU6502SP cpu_sp = CPU6502::create(InstructionSet::CPU_6502, memory_sp);
   ApexSP apex_sp = Apex::create(memory_sp);
 
   auto null_device_sp = ApexNullDevice::create();
@@ -153,16 +168,22 @@ int main(int argc, char *argv[])
   cpu_sp->registers.clear(CPU6502Registers::Flag::D);
 
   apex_sp->init();
-  if (executable_in_bin_format)
+  switch (executable_format)
   {
+  case ExecutableFormat::APEX_BIN:
     memory_sp->load_apex_bin(executable_fn);
-  }
-  else
-  {
+    cpu_sp->registers.pc = Apex::SYS_PAGE_ADDRESS + Apex::SysPageOffsets::VSTART;
+    break;
+  case ExecutableFormat::APEX_SAV:
     memory_sp->load_apex_sav(executable_fn);
+    cpu_sp->registers.pc = Apex::SYS_PAGE_ADDRESS + Apex::SysPageOffsets::VSTART;
+    break;
+  case ExecutableFormat::RAW_BINARY:
+    memory_sp->load_raw_bin(executable_fn, load_address);
+    cpu_sp->registers.pc = execution_address;
+    break;
   }
 
-  cpu_sp->registers.pc = Apex::SYS_PAGE_ADDRESS + Apex::SysPageOffsets::VSTART;
   cpu_sp->registers.a = 0x00;
   cpu_sp->registers.x = 0x00;
   cpu_sp->registers.y = 0x00;
