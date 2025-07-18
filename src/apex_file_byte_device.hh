@@ -3,7 +3,7 @@
 // Copyright 2025 Eric Smith
 // SPDX-License-Identifier: GPL-3.0-only
 
-#ifndef APEX_FILE_BYTE_DEFICE_HH
+#ifndef APEX_FILE_BYTE_DEVICE_HH
 #define APEX_FILE_BYTE_DEVICE_HH
 
 #include <filesystem>
