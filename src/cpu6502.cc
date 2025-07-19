@@ -10,6 +10,7 @@
 
 #include "cpu6502.hh"
 
+#define HALT_DISPLAY_BCD_TEST_RESULTS 0
 #define BCD_ADC_TEST 0
 #define BCD_SBC_TEST 0
 
@@ -298,10 +299,39 @@ std::uint8_t CPU6502::stack_pop()
   return m_memory_sp->read_8(addr);
 }
 
+static const std::array<std::string, 12> decimal_test_var_names
+{
+  "N1",    "N2",    "HA",    "HNZVC",
+  "DA",    "DNVZC", "AR",    "NF",
+  "VF",    "ZF",    "CF",    "ERROR",
+};
+
 void CPU6502::halt(std::uint32_t address)
 {
   std::cerr << std::format("halted at instruction at {:04x}\n", address);
   std::cerr << "registers:" << registers << "\n";
+
+  if (HALT_DISPLAY_BCD_TEST_RESULTS)
+  {
+    std::cout << std::format("CI   :      Y = {:x}\n", registers.y);
+    for (unsigned i = 0x0000; i <= 0x000b; i++)
+    {
+      if ((i >= 0x0007) && (i <= 0x00a))
+      {
+	continue;
+      }
+      std::uint8_t m = m_memory_sp->read_8(i);
+      std::cerr << std::format("{:5}: 0x{:04x} = 0x{:02x}\n", decimal_test_var_names[i], i, m);
+    }
+    std::uint8_t expected_p = (0x3c |
+			       (m_memory_sp->read_8(0x0007) & 0x80) |
+			       (m_memory_sp->read_8(0x0008) & 0x40) |
+			       (m_memory_sp->read_8(0x0009) & 0x02) |
+			       (m_memory_sp->read_8(0x000a) & 0x01));
+    std::cerr << std::format("EXP_P:        = 0x{:02x}\n", expected_p);
+    std::uint8_t dnvzc = m_memory_sp->read_8(0x0005);
+    std::cerr << std::format("DNVZC ^ EXP_P = 0x{:02x}\n", dnvzc ^ expected_p);
+  }
   std::exit(3);
 }
 
@@ -335,6 +365,7 @@ void CPU6502::execute_ADC([[maybe_unused]] const InstructionSet::Info* info,
 #endif // BCD_ADC_TEST
     std::uint8_t result_4_bit = (registers.a & 0x0f) + (operand & 0x0f) + carry_in;
     bool carry_4 = result_4_bit >> 4;
+    registers.set_v(carry_8 ^ carry_7);
     if (carry_4)
     {
       result = (result & 0xf0) | ((result + 0x06) & 0x0f);
@@ -345,7 +376,7 @@ void CPU6502::execute_ADC([[maybe_unused]] const InstructionSet::Info* info,
       result = (result + 0x06) & 0xff;
     }
     registers.set_n(result >> 7);
-    registers.set_v(carry_8 ^ carry_7);
+    //    registers.set_v(carry_8 ^ carry_7);
     carry_8 |= (result >= 0xa0);
     if (carry_8)
     {
