@@ -10,6 +10,9 @@
 
 #include "cpu6502.hh"
 
+#define BCD_ADC_TEST 0
+#define BCD_SBC_TEST 0
+
 CPU6502Registers::CPU6502Registers()
 {
   d = 0;
@@ -87,6 +90,9 @@ CPU6502::CPU6502(const InstructionSet::Sets& sets,
 		 MemorySP memory_sp):
   m_memory_sp(memory_sp),
   m_instruction_set_sp(InstructionSet::create(sets)),
+  m_absolute_ind_fixed(sets.test(InstructionSet::Set::CMOS)),
+  m_interrupt_clears_decimal(sets.test(InstructionSet::Set::CMOS)),
+  m_bcd_cmos(sets.test(InstructionSet::Set::CMOS)),
   m_trace(false)
 {
 }
@@ -122,6 +128,10 @@ void CPU6502::go_vector(Vector vector, bool brk)
     stack_push(p_value);
   }
   registers.set_i(true);
+  if (m_interrupt_clears_decimal)
+  {
+    registers.set_d(false);
+  }
   std::uint16_t addr = magic_enum::enum_integer(vector);
   registers.pc = m_memory_sp->read_8(addr);
   registers.pc |= (m_memory_sp->read_8(addr + 1) << 8);
@@ -231,15 +241,15 @@ void CPU6502::compute_effective_address(InstructionSet::Mode mode,
     temp_addr = m_memory_sp->read_16_le(registers.pc);
     registers.pc += 2;
     ea1 = m_memory_sp->read_8(temp_addr);
-    if (true)
-    {
-      // NMOS 6502 only increments low byte
-      temp_addr = (temp_addr & 0xff00) | ((temp_addr + 1) & 0x00ff);
-    }
-    else
+    if (m_absolute_ind_fixed)
     {
       // CMOS 6502 increments entire address
       ++temp_addr;
+    }
+    else
+    {
+      // NMOS 6502 only increments low byte
+      temp_addr = (temp_addr & 0xff00) | ((temp_addr + 1) & 0x00ff);
     }
     ea1 |= (m_memory_sp->read_8(temp_addr) << 8);
     break;
@@ -300,7 +310,7 @@ void CPU6502::execute_ADC([[maybe_unused]] const InstructionSet::Info* info,
 			  [[maybe_unused]] std::uint32_t ea2)
 {
   std::uint8_t operand = m_memory_sp->read_8(ea1);
-  bool carry_in = registers.test(CPU6502Registers::Flag::C);
+  bool carry_in = registers.test_c();
   std::uint16_t result = registers.a + operand + carry_in;
   std::uint8_t result_7_bit = (registers.a & 0x7f) + (operand & 0x7f) + carry_in;
   bool carry_8 = result >> 8;
@@ -319,6 +329,10 @@ void CPU6502::execute_ADC([[maybe_unused]] const InstructionSet::Info* info,
     // see US patent 3,991,307, Integrated circuit microprocessor with
     // parallel binary adder having on-the-fly correction to provide
     // decimal results, Charles Ingerham Peddle et al.
+#if BCD_ADC_TEST
+    std::cout << std::format("BCD ADC: A={:02x}, M={:02x}, C={}\n",
+			     registers.a, operand, carry_in);
+#endif // BCD_ADC_TEST
     std::uint8_t result_4_bit = (registers.a & 0x0f) + (operand & 0x0f) + carry_in;
     bool carry_4 = result_4_bit >> 4;
     if (carry_4)
@@ -339,6 +353,10 @@ void CPU6502::execute_ADC([[maybe_unused]] const InstructionSet::Info* info,
     }
     registers.set_c(carry_8);
     registers.a = result;
+#if BCD_ADC_TEST
+    std::cout << std::format("  result={:02x}, C={}\n",
+			     registers.a, registers.test_c());
+#endif // BCD_ADC_TEST
   }
 }
 
@@ -443,15 +461,18 @@ void CPU6502::execute_BEQ([[maybe_unused]] const InstructionSet::Info* info,
   }
 }
 
-void CPU6502::execute_BIT([[maybe_unused]] const InstructionSet::Info* info,
+void CPU6502::execute_BIT(const InstructionSet::Info* info,
 			  std::uint32_t ea1,
 			  [[maybe_unused]] std::uint32_t ea2)
 {
   std::uint8_t operand = m_memory_sp->read_8(ea1);
   std::uint8_t result = operand & registers.a;
   registers.set_z(result == 0);
-  registers.set_n((operand >> 7) & 1);
-  registers.set_v((operand >> 6) & 1);
+  if (info->mode != InstructionSet::Mode::IMMEDIATE)
+  {
+    registers.set_n((operand >> 7) & 1);
+    registers.set_v((operand >> 6) & 1);
+  }
 }
 
 void CPU6502::execute_BMI([[maybe_unused]] const InstructionSet::Info* info,
@@ -944,7 +965,7 @@ void CPU6502::execute_SBC([[maybe_unused]] const InstructionSet::Info* info,
 			  [[maybe_unused]] std::uint32_t ea2)
 {
   std::uint8_t operand = m_memory_sp->read_8(ea1) ^ 0xff;
-  bool carry_in = registers.test(CPU6502Registers::Flag::C);
+  bool carry_in = registers.test_c();
   std::uint16_t result = registers.a + operand + carry_in;
   std::uint8_t result_7_bit = (registers.a & 0x7f) + (operand & 0x7f) + carry_in;
   bool carry_8 = (result >> 8) & 1;
@@ -960,18 +981,32 @@ void CPU6502::execute_SBC([[maybe_unused]] const InstructionSet::Info* info,
   else
   {
     // see decimal mode comments in execute_ADC()
+#if BCD_SBC_TEST
+    std::cout << std::format("BCD SBC: A={:02x}, M={:02x}, C={}\n",
+			     registers.a, operand ^ 0xff, carry_in);
+#endif // BCD_SBC_TEST
     std::uint8_t result_4_bit = (registers.a & 0x0f) + (operand & 0x0f) + carry_in;
     bool carry_4 = result_4_bit >> 4;
     if (! carry_4)
     {
-      result = (result & 0xf0) | ((result + 0xfa) & 0xf);
-      // for 65C02, just result = (result + 0xfa) & 0xf;
+      if (m_bcd_cmos)
+      {
+	result = (result + 0xfa) & 0xff;
+      }
+      else
+      {
+	result = (result & 0xf0) | ((result + 0xfa) & 0x0f);
+      }
     }
     if (! carry_8)
     {
       result = (result + 0xa0) & 0xff;
     }
     registers.a = result;
+#if BCD_SBC_TEST
+    std::cout << std::format("  result={:02x}, C={}\n",
+			     registers.a, registers.test_c());
+#endif // BCD_SBC_TEST
   }
 }
 
@@ -1056,7 +1091,7 @@ void CPU6502::execute_TRB([[maybe_unused]] const InstructionSet::Info* info,
 {
   std::uint8_t operand = m_memory_sp->read_8(ea1);
   std::uint8_t result = operand & ~registers.a;
-  registers.set_z(result == 0);
+  registers.set_z((registers.a & operand) == 0);
   m_memory_sp->write_8(ea1, result);
 }
 
@@ -1066,7 +1101,7 @@ void CPU6502::execute_TSB([[maybe_unused]] const InstructionSet::Info* info,
 {
   std::uint8_t operand = m_memory_sp->read_8(ea1);
   std::uint8_t result = operand | registers.a;
-  registers.set_z(result == 0);
+  registers.set_z((registers.a & operand) == 0);
   m_memory_sp->write_8(ea1, result);
 }
 

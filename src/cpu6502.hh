@@ -111,6 +111,13 @@ public:
   };
 
 private:
+  MemorySP m_memory_sp;
+  InstructionSetSP m_instruction_set_sp;
+  bool m_absolute_ind_fixed;
+  bool m_interrupt_clears_decimal;
+  bool m_bcd_cmos;
+  bool m_trace;
+
   CPU6502(const InstructionSet::Sets& sets,
 	  MemorySP memory_sp);
   void compute_effective_address(InstructionSet::Mode mode,
@@ -120,10 +127,6 @@ private:
   std::uint8_t stack_pop();
   void halt(std::uint32_t address);
   void go_vector(Vector vector, bool brk = false);
-
-  MemorySP m_memory_sp;
-  InstructionSetSP m_instruction_set_sp;
-  bool m_trace;
 
   using ExecutionFnPtr = void (CPU6502::*)(const InstructionSet::Info* info,
 					   std::uint32_t ea1,
