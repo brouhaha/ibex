@@ -354,8 +354,12 @@ void CPU6502::execute_ADC([[maybe_unused]] const InstructionSet::Info* info,
     registers.set_c(carry_8);
     registers.a = result;
 #if BCD_ADC_TEST
-    std::cout << std::format("  result={:02x}, C={}\n",
-			     registers.a, registers.test_c());
+    std::cout << std::format("  result={:02x}, C={}, Z={}, V={}, N={}\n",
+			     registers.a,
+			     registers.test_c(),
+			     registers.test_z(),
+			     registers.test_v(),
+			     registers.test_n());
 #endif // BCD_ADC_TEST
   }
 }
@@ -1004,8 +1008,12 @@ void CPU6502::execute_SBC([[maybe_unused]] const InstructionSet::Info* info,
     }
     registers.a = result;
 #if BCD_SBC_TEST
-    std::cout << std::format("  result={:02x}, C={}\n",
-			     registers.a, registers.test_c());
+    std::cout << std::format("  result={:02x}, C={}, Z={}, V={}, N={}\n",
+			     registers.a,
+			     registers.test_c(),
+			     registers.test_z(),
+			     registers.test_v(),
+			     registers.test_n());
 #endif // BCD_SBC_TEST
   }
 }

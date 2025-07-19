@@ -20,14 +20,6 @@
 #include "memory.hh"
 
 
-bool skip_decimal_test = false;
-std::uint16_t test_patch_address = 0x3361;
-std::uint16_t test_patch_target_address = 0x345d;
-
-
-static constexpr std::uint8_t JMP_ABS_OPCODE = 0x4c;
-
-
 namespace po = boost::program_options;
 
 void conflicting_options(const boost::program_options::variables_map& vm,
@@ -64,6 +56,8 @@ enum class ExecutableFormat
 
 int main(int argc, char *argv[])
 {
+  bool cmos;
+
   ExecutableFormat executable_format = ExecutableFormat::APEX_SAV;
   std::string executable_fn;
   std::uint16_t load_address = 0x0000;       // XXX need a command line argument
@@ -83,6 +77,7 @@ int main(int argc, char *argv[])
     po::options_description gen_opts("Options");
     gen_opts.add_options()
       ("help",                                           "output help message")
+      ("cmos,c",                                         "CMOS R65C02")
       ("bin,b",                                          "executable is in BIN format")
       ("raw,r",                                          "executable is a raw binary file")
       ("input,i",   po::value<std::string>(&input_fn),   "input file")
@@ -111,6 +106,8 @@ int main(int argc, char *argv[])
       std::exit(0);
     }
 
+    cmos = vm.count("cmos") != 0;
+
     if (vm.count("executable") != 1)
     {
       std::cout << "executable file must be specified\n";
@@ -137,7 +134,8 @@ int main(int argc, char *argv[])
   }
 
   MemorySP memory_sp = Memory::create(1ull<<16);
-  CPU6502SP cpu_sp = CPU6502::create(InstructionSet::CPU_6502, memory_sp);
+  CPU6502SP cpu_sp = CPU6502::create(cmos ? InstructionSet::CPU_R65C02 : InstructionSet::CPU_6502,
+				     memory_sp);
   ApexSP apex_sp = Apex::create(memory_sp);
 
   auto null_device_sp = ApexNullDevice::create();
