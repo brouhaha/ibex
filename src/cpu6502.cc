@@ -335,24 +335,29 @@ void CPU6502::halt(std::uint32_t address)
   std::exit(3);
 }
 
+static std::int8_t bcd_digit_sign_extend(std::uint8_t digit)
+{
+  return static_cast<std::int8_t>(digit + ((digit & 0x08) ? 0xf0 : 0x00));
+}
+
 void CPU6502::execute_ADC([[maybe_unused]] const InstructionSet::Info* info,
 			  std::uint32_t ea1,
 			  [[maybe_unused]] std::uint32_t ea2)
 {
   std::uint8_t operand = m_memory_sp->read_8(ea1);
   bool carry_in = registers.test_c();
-  std::uint16_t result = registers.a + operand + carry_in;
-  std::uint8_t result_7_bit = (registers.a & 0x7f) + (operand & 0x7f) + carry_in;
-  bool carry_8 = result >> 8;
-  bool carry_7 = result_7_bit >> 7;
-  result &= 0xff;
-  registers.set_z(result == 0);
+  std::uint16_t binary_result = registers.a + operand + carry_in;
+  std::uint8_t binary_result_7_bit = (registers.a & 0x7f) + (operand & 0x7f) + carry_in;
+  bool binary_carry_8 = binary_result >> 8;
+  bool binary_carry_7 = binary_result_7_bit >> 7;
+  binary_result &= 0xff;
+  registers.set_z(binary_result == 0);
   if (! registers.test(CPU6502Registers::Flag::D))
   {
-    registers.set_n(result >> 7);
-    registers.set_c(carry_8);
-    registers.set_v(carry_8 ^ carry_7);
-    registers.a = result;
+    registers.set_n_z_for_result(binary_result);
+    registers.set_c(binary_carry_8);
+    registers.set_v(binary_carry_8 ^ binary_carry_7);
+    registers.a = binary_result;
   }
   else
   {
@@ -363,27 +368,36 @@ void CPU6502::execute_ADC([[maybe_unused]] const InstructionSet::Info* info,
     std::cout << std::format("BCD ADC: A={:02x}, M={:02x}, C={}\n",
 			     registers.a, operand, carry_in);
 #endif // BCD_ADC_TEST
-    std::uint8_t result_4_bit = (registers.a & 0x0f) + (operand & 0x0f) + carry_in;
-    bool carry_4 = result_4_bit >> 4;
-    registers.set_v(carry_8 ^ carry_7);
-    if (carry_4)
+    std::uint8_t bcd_lsd = (registers.a & 0x0f) + (operand & 0x0f) + carry_in;
+    std::uint8_t bcd_msd = (registers.a >> 4) + (operand >> 4);
+    bool bcd_carry_4 = bcd_lsd > 0x09;
+    if (bcd_carry_4)
     {
-      result = (result & 0xf0) | ((result + 0x06) & 0x0f);
+      bcd_lsd += 0x06;
+      bcd_msd += 0x01;
     }
-    else if ((result & 0x0f) > 9)
+    if (! m_bcd_cmos)
     {
-      carry_8 |= (result >= 0xfa);
-      result = (result + 0x06) & 0xff;
+      // NMOS
+      std::uint8_t bcd_partial_result = (bcd_msd << 4) | (bcd_lsd & 0x0f);
+      registers.set_n(bcd_partial_result & 0x80);
+      registers.set_z(! binary_result);
     }
-    registers.set_n(result >> 7);
-    //    registers.set_v(carry_8 ^ carry_7);
-    carry_8 |= (result >= 0xa0);
-    if (carry_8)
+    std::int8_t bcd_signed_msd = bcd_digit_sign_extend(registers.a >> 4) + bcd_digit_sign_extend(operand >> 4) + bcd_carry_4;
+    registers.set_v((bcd_signed_msd < -8) || (bcd_signed_msd > 7));
+    if (bcd_msd > 0x09)
     {
-      result = (result + 0x60) & 0xff;
+      bcd_msd += 0x06;
     }
-    registers.set_c(carry_8);
-    registers.a = result;
+    registers.set_c(bcd_msd > 0xf);
+    std::uint8_t bcd_result = (bcd_msd << 4) | (bcd_lsd & 0x0f);
+    registers.a = bcd_result;
+    if (m_bcd_cmos)
+    {
+      // CMOS
+      registers.set_n(bcd_result & 0x80);
+      registers.set_z(! bcd_result);
+    }
 #if BCD_ADC_TEST
     std::cout << std::format("  result={:02x}, C={}, Z={}, V={}, N={}\n",
 			     registers.a,
@@ -1036,6 +1050,10 @@ void CPU6502::execute_SBC([[maybe_unused]] const InstructionSet::Info* info,
     if (! carry_8)
     {
       result = (result + 0xa0) & 0xff;
+    }
+    if (m_bcd_cmos)
+    {
+      registers.set_n_z_for_result(result);
     }
     registers.a = result;
 #if BCD_SBC_TEST
