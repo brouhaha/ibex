@@ -3,6 +3,7 @@
 // Copyright 2022-2025 Eric Smith
 // SPDX-License-Identifier: GPL-3.0-only
 
+#include <chrono>
 #include <csignal>
 #include <cstdlib>
 #include <format>
@@ -17,6 +18,7 @@
 #include "apex_printer_device.hh"
 #include "apex_file_byte_device.hh"
 #include "cpu6502.hh"
+#include "elapsed_time.hh"
 #include "instruction_set.hh"
 #include "memory.hh"
 
@@ -55,14 +57,35 @@ enum class ExecutableFormat
 };
 
 
+static std::string memory_dump_fn;
+static MemorySP memory_sp;
 static CPU6502SP cpu_sp;
+
+static ElapsedTime elapsed_time;
 
 
 void finish()
 {
-  std::cerr << "\n";
-  std::cerr << std::format("{} instructions executed\n", cpu_sp->get_instruction_count());
-  std::cerr << std::format("{} cycles\n",                cpu_sp->get_cycle_count());
+  elapsed_time.stop();
+
+  if (memory_dump_fn.size())
+  {
+    memory_sp->dump_raw_bin(memory_dump_fn);
+  }
+
+  double elapsed_time_seconds = elapsed_time.get_elapsed_time_seconds();
+
+  std::cout << "elapsed time (s): " << elapsed_time_seconds << "\n";
+
+  std::uint64_t instruction_count = cpu_sp->get_instruction_count();
+  std::cerr << std::format("{} instructions executed\n", instruction_count);
+  std::cerr << std::format("{} instructions executed per second\n", instruction_count / elapsed_time_seconds);
+  
+  std::uint64_t cycle_count = cpu_sp->get_cycle_count();
+  std::cerr << std::format("{} cycles executed\n", cycle_count);
+  std::cerr << std::format("{} cycles executed per second/s\n", cycle_count / elapsed_time_seconds);
+
+  std::cerr << std::format("average clocks per instruction: {}\n", ((double) cycle_count) / ((double) instruction_count));
 }
 
 
@@ -110,10 +133,11 @@ int main(int argc, char *argv[])
 
     po::options_description hidden_opts("Hidden options:");
     hidden_opts.add_options()
-      ("executable", po::value<std::string>(&executable_fn), "executable filename")
-      ("hextable",                                           "print hex table")
-      ("hextabledetail",                                     "print hex table with detail")
-      ("summarytable",                                       "print summary table");
+      ("executable", po::value<std::string>(&executable_fn),  "executable filename")
+      ("dump",       po::value<std::string>(&memory_dump_fn), "memory dump filename")
+      ("hextable",                                            "print hex table")
+      ("hextabledetail",                                      "print hex table with detail")
+      ("summarytable",                                        "print summary table");
 
     po::positional_options_description positional_opts;
     positional_opts.add("executable", -1);
@@ -188,7 +212,7 @@ int main(int argc, char *argv[])
     std::cout << "\n\n";
   }
 
-  MemorySP memory_sp = Memory::create(1ull<<16);
+  memory_sp = Memory::create(1ull<<16);
   cpu_sp = CPU6502::create(instruction_sets,
 			   memory_sp);
 
@@ -248,6 +272,8 @@ int main(int argc, char *argv[])
   memory_sp->set_trace(false);
 
   std::signal(SIGINT, signal_handler);
+
+  elapsed_time.start();
 
   bool run = true;
   while (run)

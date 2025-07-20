@@ -6,8 +6,8 @@ from typing import Optional
 
 Import('env')
 
-OPTIMIZE = False
-DEBUG = True
+OPTIMIZE = True
+DEBUG = False
 
 cxxflags = ['--std=c++23', '-Wall', '-Wextra', '-Werror', '-pedantic', '-g']
 if OPTIMIZE:
@@ -38,6 +38,7 @@ prog_infos = [ProgInfo('ibex',
                         'apex_file_byte_device.cc',
                         'apex_printer_device.cc',
                         'cpu6502.cc',
+                        'elapsed_time.cc',
                         'ibex.cc',
                         'instruction_set.cc',
                         'utility.cc',
