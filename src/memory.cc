@@ -33,8 +33,8 @@ void Memory::set_trace(bool value)
 
 static const std::string hex_digits = "0123456789abcdef";
 
-static constexpr unsigned ADDRESS_HEX_DIGITS = 2 * sizeof(Memory::Address);
-static constexpr unsigned DATA_HEX_DIGITS = 2 * sizeof(Memory::Data);
+static constexpr unsigned ADDRESS_HEX_DIGITS = 4;
+static constexpr unsigned DATA_HEX_DIGITS = 2;
 
 void Memory::load_raw_bin(const std::filesystem::path& object_filename,
 			  Address load_address)
@@ -45,7 +45,7 @@ void Memory::load_raw_bin(const std::filesystem::path& object_filename,
     throw std::runtime_error("can't open object file");
   }
   char c;
-  std::size_t length;
+  std::size_t length = 0;
   while (true)
   {
     c = object_file.get();
@@ -171,6 +171,24 @@ void Memory::load_apex_sav(const std::filesystem::path& save_filename)
     }
   }
   std::cerr << std::format("loading ended at {:04x}, size {}\n", address - 1, loaded_size);
+}
+
+void Memory::dump_raw_bin(const std::filesystem::path& raw_bin_filename,
+			  Address start_address,
+			  std::size_t size)
+{
+  if (size == 0)
+  {
+    size = m_memory.size() - start_address;
+  }
+  std::ofstream dump_file(raw_bin_filename,
+			  std::ios_base::out | std::ios_base::binary);
+  if (! dump_file.is_open())
+  {
+    throw std::runtime_error("can't open memory dump file");
+  }
+  dump_file.write(reinterpret_cast<char*>(m_memory.data() + start_address),
+		  size);
 }
 
 Memory::Data Memory::read_8(Address addr)

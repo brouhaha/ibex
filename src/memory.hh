@@ -27,6 +27,10 @@ public:
   void load_apex_bin(const std::filesystem::path& object_filename);
   void load_apex_sav(const std::filesystem::path& object_filename);
 
+  void dump_raw_bin(const std::filesystem::path& object_filename,
+		    Address start_address = 0x0000,
+		    std::size_t size = 0);  // size of 0 means all
+
   void set_trace(bool value);
 
   Data read_8(Address addr);
