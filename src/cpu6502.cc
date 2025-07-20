@@ -448,6 +448,7 @@ void CPU6502::execute_ADC([[maybe_unused]] const InstructionSet::Info* info,
       // CMOS
       registers.set_n(bcd_result & 0x80);
       registers.set_z(! bcd_result);
+      ++m_instruction_cycle_count;
     }
 #if BCD_ADC_TEST
     std::cout << std::format("  result={:02x}, C={}, Z={}, V={}, N={}\n",
@@ -1073,6 +1074,7 @@ void CPU6502::execute_SBC([[maybe_unused]] const InstructionSet::Info* info,
     if (m_bcd_cmos)
     {
       registers.set_n_z_for_result(result);
+      ++m_instruction_cycle_count;
     }
     registers.a = result;
 #if BCD_SBC_TEST
