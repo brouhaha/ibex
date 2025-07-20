@@ -56,7 +56,12 @@ enum class ExecutableFormat
 
 int main(int argc, char *argv[])
 {
+  InstructionSet::Sets instruction_sets;
   bool cmos;
+
+  bool print_opcode_matrix = false;
+  bool print_detail = false;
+  bool print_summary_table = false;
 
   ExecutableFormat executable_format = ExecutableFormat::APEX_SAV;
   std::string executable_fn;
@@ -86,7 +91,10 @@ int main(int argc, char *argv[])
 
     po::options_description hidden_opts("Hidden options:");
     hidden_opts.add_options()
-      ("executable", po::value<std::string>(&executable_fn), "executable filename");
+      ("executable", po::value<std::string>(&executable_fn), "executable filename")
+      ("hextable",                                           "print hex table")
+      ("hextabledetail",                                     "print hex table with detail")
+      ("summarytable",                                       "print summary table");
 
     po::positional_options_description positional_opts;
     positional_opts.add("executable", -1);
@@ -107,6 +115,21 @@ int main(int argc, char *argv[])
     }
 
     cmos = vm.count("cmos") != 0;
+    instruction_sets = cmos ? InstructionSet::CPU_R65C02 : InstructionSet::CPU_6502;
+
+    if (vm.count("hextable"))
+    {
+      print_opcode_matrix = true;
+    }
+    if (vm.count("hextabledetail"))
+    {
+      print_opcode_matrix = true;
+      print_detail = true;
+    }
+    if (vm.count("summarytable"))
+    {
+      print_summary_table = true;
+    }
 
     if (vm.count("executable") != 1)
     {
@@ -133,9 +156,23 @@ int main(int argc, char *argv[])
     std::exit(1);
   }
 
+  if (print_opcode_matrix)
+  {
+    auto inst_set_sp = InstructionSet::create(instruction_sets);
+    inst_set_sp->print_opcode_matrix(std::cout, print_detail);
+    std::cout << "\n\n";
+  }
+  if (print_summary_table)
+  {
+    auto inst_set_sp = InstructionSet::create(instruction_sets);
+    inst_set_sp->print_summary_table(std::cout);
+    std::cout << "\n\n";
+  }
+
   MemorySP memory_sp = Memory::create(1ull<<16);
-  CPU6502SP cpu_sp = CPU6502::create(cmos ? InstructionSet::CPU_R65C02 : InstructionSet::CPU_6502,
+  CPU6502SP cpu_sp = CPU6502::create(instruction_sets,
 				     memory_sp);
+
   ApexSP apex_sp = Apex::create(memory_sp);
 
   auto null_device_sp = ApexNullDevice::create();

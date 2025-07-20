@@ -12,6 +12,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <magic_enum.hpp>
 #include <magic_enum_containers.hpp>
@@ -92,8 +93,6 @@ public:
     ST_VEC_IND_Y,   // Commodore 65CE02
   };
 
-  static std::uint32_t get_length(Mode mode);
-
   struct Info
   {
     const std::string mnemonic;
@@ -101,9 +100,10 @@ public:
     Inst inst;
     Mode mode;
     std::uint8_t opcode;
+    std::uint8_t base_cycle_count;  // plus addrssing mode, page crossing, branch taken
+    bool page_crossing_extra_cycle: 1;
+    bool cmos_extra_cycle:          1; // 65C02 adds cycle to fix JMP (ABS) bug
   };
-
-  std::ostream& dump_opcodes(std::ostream& os);
 
   bool valid_mnemonic(const std::string& mnemonic) const;
 
@@ -113,12 +113,17 @@ public:
   std::string disassemble(std::uint16_t pc, std::array<std::uint8_t, 3> inst_bytes);
 
   static std::uint8_t operand_size_bytes(Mode mode);
+  static std::uint8_t address_mode_added_cycles(Mode mode);
 
   static bool pal65_compatible_modes(Mode m1, Mode m2);
+
+  std::ostream& print_opcode_matrix(std::ostream& os, bool detail);
+  std::ostream& print_summary_table(std::ostream& os);
 
 protected:
   InstructionSet(const Sets& sets = { Set::BASE });
 
+  Sets m_sets;
   std::array<const Info*, 0x100> m_by_opcode;
   std::map<std::string, std::vector<Info>> m_by_mnemonic;
 };

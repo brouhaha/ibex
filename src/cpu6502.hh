@@ -85,8 +85,16 @@ class CPU6502
 public:
   static std::shared_ptr<CPU6502> create(const InstructionSet::Sets& sets,
 					 MemorySP memory_sp);
+
+  void reset_counters();
+
+  std::uint64_t get_instruction_count();
+  std::uint64_t get_cycle_count();
+
   void set_trace(bool value);
+
   void execute_instruction();
+
   void execute_rts();
 
   CPU6502Registers registers;  // direct access
@@ -113,19 +121,26 @@ public:
 private:
   MemorySP m_memory_sp;
   InstructionSetSP m_instruction_set_sp;
+  bool m_cmos;
+  std::uint64_t m_instruction_count;
+  std::uint64_t m_cycle_count;
   bool m_absolute_ind_fixed;
   bool m_interrupt_clears_decimal;
   bool m_bcd_cmos;
   bool m_trace;
+  std::uint8_t m_instruction_cycle_count;
 
   CPU6502(const InstructionSet::Sets& sets,
 	  MemorySP memory_sp);
-  void compute_effective_address(InstructionSet::Mode mode,
+
+  void compute_effective_address(const InstructionSet::Info* info,
 				 std::uint32_t& ea1,
 				 std::uint32_t& ea2);
+
   void stack_push(std::uint8_t byte);
   std::uint8_t stack_pop();
   void halt(std::uint32_t address);
+  void branch(std::uint32_t address);
   void go_vector(Vector vector, bool brk = false);
 
   using ExecutionFnPtr = void (CPU6502::*)(const InstructionSet::Info* info,

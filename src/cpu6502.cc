@@ -91,11 +91,30 @@ CPU6502::CPU6502(const InstructionSet::Sets& sets,
 		 MemorySP memory_sp):
   m_memory_sp(memory_sp),
   m_instruction_set_sp(InstructionSet::create(sets)),
+  m_cmos(sets.test(InstructionSet::Set::CMOS)),
+  m_instruction_count(0),
+  m_cycle_count(0),
   m_absolute_ind_fixed(sets.test(InstructionSet::Set::CMOS)),
   m_interrupt_clears_decimal(sets.test(InstructionSet::Set::CMOS)),
   m_bcd_cmos(sets.test(InstructionSet::Set::CMOS)),
   m_trace(false)
 {
+}
+
+void CPU6502::reset_counters()
+{
+  m_instruction_count = 0;
+  m_cycle_count = 0;
+}
+
+std::uint64_t CPU6502::get_instruction_count()
+{
+  return m_instruction_count;
+}
+
+std::uint64_t CPU6502::get_cycle_count()
+{
+  return m_cycle_count;
 }
 
 void CPU6502::set_trace(bool value)
@@ -150,6 +169,8 @@ void CPU6502::execute_instruction()
 					 opcode));
     
   }
+  m_instruction_cycle_count = info->base_cycle_count + InstructionSet::address_mode_added_cycles(info->mode);
+  m_instruction_cycle_count += m_cmos ? info->cmos_extra_cycle : 0;
   if (m_trace)
   {
     std::array<std::uint8_t, 3> bytes
@@ -166,12 +187,14 @@ void CPU6502::execute_instruction()
   ++registers.pc;
   std::uint32_t ea1;
   std::uint32_t ea2;
-  compute_effective_address(info->mode, ea1, ea2);
+  compute_effective_address(info, ea1, ea2);
   (this->*s_execute_inst_fn_ptrs[info->inst])(info, ea1, ea2);
   if (m_trace)
   {
     std::cout << "--- " << registers << "\n";
   }
+  ++m_instruction_count;
+  m_cycle_count += m_instruction_cycle_count;
 }
 
 void CPU6502::execute_rts()
@@ -183,12 +206,13 @@ void CPU6502::execute_rts()
   }
 }
 
-void CPU6502::compute_effective_address(InstructionSet::Mode mode,
+void CPU6502::compute_effective_address(const InstructionSet::Info* info,
 					std::uint32_t& ea1,
 					std::uint32_t& ea2)
 {
-  std::uint32_t temp_addr;
-  switch (mode)
+  std::uint32_t temp1;
+  std::uint32_t temp2;
+  switch (info->mode)
   {
   case IMPLIED:
   case ACCUMULATOR:
@@ -200,65 +224,77 @@ void CPU6502::compute_effective_address(InstructionSet::Mode mode,
     ea1 = m_memory_sp->read_8(registers.pc++);
     break;
   case ZERO_PAGE_X:
-    temp_addr = m_memory_sp->read_8(registers.pc++);
-    ea1 = (temp_addr + registers.x) & 0xff;
+    temp1 = m_memory_sp->read_8(registers.pc++);
+    ea1 = (temp1 + registers.x) & 0xff;
     break;
   case ZERO_PAGE_Y:
-    temp_addr= m_memory_sp->read_8(registers.pc++);
-    ea1 = (temp_addr + registers.y) & 0xff;
+    temp1= m_memory_sp->read_8(registers.pc++);
+    ea1 = (temp1 + registers.y) & 0xff;
     break;
   case ZP_IND:  // CMOS
-    temp_addr = m_memory_sp->read_8(registers.pc++);
-    ea1 = m_memory_sp->read_8(temp_addr);
-    ea1 |= (m_memory_sp->read_8((temp_addr + 1) & 0xff) << 8);
+    temp1 = m_memory_sp->read_8(registers.pc++);
+    ea1 = m_memory_sp->read_8(temp1);
+    ea1 |= (m_memory_sp->read_8((temp1 + 1) & 0xff) << 8);
     break;
   case ZP_X_IND:
-    temp_addr = m_memory_sp->read_8(registers.pc++);
-    temp_addr = (temp_addr + registers.x) & 0xff;
-    ea1 = m_memory_sp->read_8(temp_addr);
-    ea1 |= (m_memory_sp->read_8((temp_addr + 1) & 0xff) << 8);
+    temp1 = m_memory_sp->read_8(registers.pc++);
+    temp1 = (temp1 + registers.x) & 0xff;
+    ea1 = m_memory_sp->read_8(temp1);
+    ea1 |= (m_memory_sp->read_8((temp1 + 1) & 0xff) << 8);
     break;
   case ZP_IND_Y:
-    temp_addr = m_memory_sp->read_8(registers.pc++);
-    ea1 = m_memory_sp->read_8(temp_addr);
-    ea1 |= (m_memory_sp->read_8((temp_addr + 1) & 0xff) << 8);
-    ea1 += registers.y;
+    temp1 = m_memory_sp->read_8(registers.pc++);
+    temp2 = m_memory_sp->read_8(temp1);
+    temp2 |= (m_memory_sp->read_8((temp1 + 1) & 0xff) << 8);
+    ea1 = temp2 + registers.y;
+    if (info->page_crossing_extra_cycle && ((ea1 & 0xff00) != (temp2 & 0xff00)))
+    {
+      ++m_instruction_cycle_count;
+    }
     break;
   case ABSOLUTE:
     ea1 = m_memory_sp->read_16_le(registers.pc);
     registers.pc += 2;
     break;
   case ABSOLUTE_X:
-    ea1 = m_memory_sp->read_16_le(registers.pc);
+    temp1 = m_memory_sp->read_16_le(registers.pc);
     registers.pc += 2;
-    ea1 += registers.x;
+    ea1 = temp1 + registers.x;
+    if (info->page_crossing_extra_cycle && ((ea1 & 0xff00) != (temp1 & 0xff00)))
+    {
+      ++m_instruction_cycle_count;
+    }
     break;
   case ABSOLUTE_Y:
-    ea1 = m_memory_sp->read_16_le(registers.pc);
+    temp1 = m_memory_sp->read_16_le(registers.pc);
     registers.pc += 2;
-    ea1 += registers.y;
+    ea1 = temp1 + registers.y;
+    if (info->page_crossing_extra_cycle && ((ea1 & 0xff00) != (temp1 & 0xff00)))
+    {
+      ++m_instruction_cycle_count;
+    }
     break;
   case ABSOLUTE_IND:
-    temp_addr = m_memory_sp->read_16_le(registers.pc);
+    temp1 = m_memory_sp->read_16_le(registers.pc);
     registers.pc += 2;
-    ea1 = m_memory_sp->read_8(temp_addr);
+    ea1 = m_memory_sp->read_8(temp1);
     if (m_absolute_ind_fixed)
     {
       // CMOS 6502 increments entire address
-      ++temp_addr;
+      ++temp1;
     }
     else
     {
       // NMOS 6502 only increments low byte
-      temp_addr = (temp_addr & 0xff00) | ((temp_addr + 1) & 0x00ff);
+      temp1 = (temp1 & 0xff00) | ((temp1 + 1) & 0x00ff);
     }
-    ea1 |= (m_memory_sp->read_8(temp_addr) << 8);
+    ea1 |= (m_memory_sp->read_8(temp1) << 8);
     break;
   case ABS_X_IND:  // CMOS
-    temp_addr = m_memory_sp->read_16_le(registers.pc);
+    temp1 = m_memory_sp->read_16_le(registers.pc);
     registers.pc += 2;
-    temp_addr += registers.x;
-    ea1 = m_memory_sp->read_16_le(temp_addr);
+    temp1 += registers.x;
+    ea1 = m_memory_sp->read_16_le(temp1);
     break;
   case ZP_RELATIVE:  // Rockwell BBR, BBS
     ea1 = m_memory_sp->read_8(registers.pc++);
@@ -276,9 +312,9 @@ void CPU6502::compute_effective_address(InstructionSet::Mode mode,
     ea2 = (ea2 + registers.pc) & 0xffff;
     break;
   case ST_VEC_IND_Y:  // Commodore 65CE02
-    temp_addr = m_memory_sp->read_8(registers.pc++);
-    temp_addr += 0x0100 + registers.s;
-    ea1 = m_memory_sp->read_16_le(temp_addr);
+    temp1 = m_memory_sp->read_8(registers.pc++);
+    temp1 += 0x0100 + registers.s;
+    ea1 = m_memory_sp->read_16_le(temp1);
     break;
   default:
     throw std::logic_error("unknown addressing mode");
@@ -333,6 +369,21 @@ void CPU6502::halt(std::uint32_t address)
     std::cerr << std::format("DNVZC ^ EXP_P = 0x{:02x}\n", dnvzc ^ expected_p);
   }
   std::exit(3);
+}
+
+
+void CPU6502::branch(std::uint32_t address)
+{
+  ++m_instruction_cycle_count;
+  if ((registers.pc & 0xff00) != (address & 0xff00))
+  {
+    ++m_instruction_cycle_count;
+  }
+  if (address == static_cast<std::uint32_t>(registers.pc - 2))
+  {
+    halt(address);
+  }
+  registers.pc = address;
 }
 
 static std::int8_t bcd_digit_sign_extend(std::uint8_t digit)
@@ -452,7 +503,7 @@ void CPU6502::execute_BBR(const InstructionSet::Info* info,
   unsigned bit_num = (info->opcode >> 4) & 7;
   if (! ((operand >> bit_num) & 1))
   {
-    registers.pc = ea2;
+    branch(ea2);
   }
 }
 
@@ -464,7 +515,7 @@ void CPU6502::execute_BBS(const InstructionSet::Info* info,
   unsigned bit_num = (info->opcode >> 4) & 7;
   if ((operand >> bit_num) & 1)
   {
-    registers.pc = ea2;
+    branch(ea2);
   }
 }
 
@@ -474,11 +525,7 @@ void CPU6502::execute_BCC([[maybe_unused]] const InstructionSet::Info* info,
 {
   if (! registers.test(CPU6502Registers::Flag::C))
   {
-    if (ea2 == static_cast<std::uint32_t>(registers.pc - 2))
-    {
-      halt(ea2);
-    }
-    registers.pc = ea2;
+    branch(ea2);
   }
 }
 
@@ -488,11 +535,7 @@ void CPU6502::execute_BCS([[maybe_unused]] const InstructionSet::Info* info,
 {
   if (registers.test(CPU6502Registers::Flag::C))
   {
-    if (ea2 == static_cast<std::uint32_t>(registers.pc - 2))
-    {
-      halt(ea2);
-    }
-    registers.pc = ea2;
+    branch(ea2);
   }
 }
 
@@ -502,11 +545,7 @@ void CPU6502::execute_BEQ([[maybe_unused]] const InstructionSet::Info* info,
 {
   if (registers.test(CPU6502Registers::Flag::Z))
   {
-    if (ea2 == static_cast<std::uint32_t>(registers.pc - 2))
-    {
-      halt(ea2);
-    }
-    registers.pc = ea2;
+    branch(ea2);
   }
 }
 
@@ -530,11 +569,7 @@ void CPU6502::execute_BMI([[maybe_unused]] const InstructionSet::Info* info,
 {
   if (registers.test(CPU6502Registers::Flag::N))
   {
-    if (ea2 == static_cast<std::uint32_t>(registers.pc - 2))
-    {
-      halt(ea2);
-    }
-    registers.pc = ea2;
+    branch(ea2);
   }
 }
 
@@ -544,11 +579,7 @@ void CPU6502::execute_BNE([[maybe_unused]] const InstructionSet::Info* info,
 {
   if (! registers.test(CPU6502Registers::Flag::Z))
   {
-    if (ea2 == static_cast<std::uint32_t>(registers.pc - 2))
-    {
-      halt(ea2);
-    }
-    registers.pc = ea2;
+    branch(ea2);
   }
 }
 
@@ -558,11 +589,7 @@ void CPU6502::execute_BPL([[maybe_unused]] const InstructionSet::Info* info,
 {
   if (! registers.test(CPU6502Registers::Flag::N))
   {
-    if (ea2 == static_cast<std::uint32_t>(registers.pc - 2))
-    {
-      halt(ea2);
-    }
-    registers.pc = ea2;
+    branch(ea2);
   }
 }
 
@@ -570,7 +597,7 @@ void CPU6502::execute_BRA([[maybe_unused]] const InstructionSet::Info* info,
 			  [[maybe_unused]] std::uint32_t ea1,
 			  std::uint32_t ea2)
 {
-  registers.pc = ea2;
+  branch(ea2);
 }
 
 void CPU6502::execute_BRK([[maybe_unused]] const InstructionSet::Info* info,
@@ -587,11 +614,7 @@ void CPU6502::execute_BVC([[maybe_unused]] const InstructionSet::Info* info,
 {
   if (! registers.test(CPU6502Registers::Flag::V))
   {
-    if (ea2 == static_cast<std::uint32_t>(registers.pc - 2))
-    {
-      halt(ea2);
-    }
-    registers.pc = ea2;
+    branch(ea2);
   }
 }
 
@@ -601,11 +624,7 @@ void CPU6502::execute_BVS([[maybe_unused]] const InstructionSet::Info* info,
 {
   if (registers.test(CPU6502Registers::Flag::V))
   {
-    if (ea2 == static_cast<std::uint32_t>(registers.pc - 2))
-    {
-      halt(ea2);
-    }
-    registers.pc = ea2;
+    branch(ea2);
   }
 }
 
