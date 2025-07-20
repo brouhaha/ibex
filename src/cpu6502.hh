@@ -93,7 +93,9 @@ public:
 
   void set_trace(bool value);
 
-  void execute_instruction();
+  // returns false unless halts (tight loop branch or jump),
+  // or tries to execute an undefined opcode
+  bool execute_instruction();
 
   void execute_rts();
 
@@ -122,11 +124,12 @@ private:
   MemorySP m_memory_sp;
   InstructionSetSP m_instruction_set_sp;
   bool m_cmos;
-  std::uint64_t m_instruction_count;
-  std::uint64_t m_cycle_count;
   bool m_absolute_ind_fixed;
   bool m_interrupt_clears_decimal;
   bool m_bcd_cmos;
+  bool m_halt;
+  std::uint64_t m_instruction_count;
+  std::uint64_t m_cycle_count;
   bool m_trace;
   std::uint8_t m_instruction_cycle_count;
 

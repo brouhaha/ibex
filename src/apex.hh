@@ -47,7 +47,9 @@ public:
 
   void init();  // set system page values in preparation to run user program
 
-  void vector_exec(CPU6502Registers& registers);  // emulate an Apex system call
+  // returns false unless user program enters Apex via KRENTR, KSAVER, or KRELOD,
+  // or uses an unimplemented Apex function (e.g., KSCAN)
+  bool vector_exec(CPU6502Registers& registers);  // emulate an Apex system call
 
   void handler_exec(CPU6502Registers& registers); // emulate an Apex I/O handler
 
@@ -149,14 +151,14 @@ public:
 protected:
   Apex(MemorySP memory_sp);
 
-  void krentr(CPU6502Registers& registers);
-  void ksaver(CPU6502Registers& registers);
-  void krelod(CPU6502Registers& registers);
-  void khand (CPU6502Registers& registers);
-  void kscan (CPU6502Registers& registers);
-  void krestd(CPU6502Registers& registers);
-  void kread (CPU6502Registers& registers);
-  void kwrite(CPU6502Registers& registers);
+  bool krentr(CPU6502Registers& registers);
+  bool ksaver(CPU6502Registers& registers);
+  bool krelod(CPU6502Registers& registers);
+  bool khand (CPU6502Registers& registers);
+  bool kscan (CPU6502Registers& registers);
+  bool krestd(CPU6502Registers& registers);
+  bool kread (CPU6502Registers& registers);
+  bool kwrite(CPU6502Registers& registers);
 
   MemorySP m_memory_sp;
 

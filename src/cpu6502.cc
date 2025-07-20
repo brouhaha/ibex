@@ -92,11 +92,12 @@ CPU6502::CPU6502(const InstructionSet::Sets& sets,
   m_memory_sp(memory_sp),
   m_instruction_set_sp(InstructionSet::create(sets)),
   m_cmos(sets.test(InstructionSet::Set::CMOS)),
-  m_instruction_count(0),
-  m_cycle_count(0),
   m_absolute_ind_fixed(sets.test(InstructionSet::Set::CMOS)),
   m_interrupt_clears_decimal(sets.test(InstructionSet::Set::CMOS)),
   m_bcd_cmos(sets.test(InstructionSet::Set::CMOS)),
+  m_halt(false),
+  m_instruction_count(0),
+  m_cycle_count(0),
   m_trace(false)
 {
 }
@@ -159,15 +160,15 @@ void CPU6502::go_vector(Vector vector, bool brk)
 
 using enum InstructionSet::Mode;
 
-void CPU6502::execute_instruction()
+bool CPU6502::execute_instruction()
 {
   std::uint8_t opcode = m_memory_sp->read_8(registers.pc);
   const InstructionSet::Info* info = m_instruction_set_sp->get(opcode);
   if (! info)
   {
-    throw std::runtime_error(std::format("undefined opcode {:02x}",
-					 opcode));
-    
+    std::cerr << std::format("undefined opcode {:02x}",
+			     opcode);
+    return true;
   }
   m_instruction_cycle_count = info->base_cycle_count + InstructionSet::address_mode_added_cycles(info->mode);
   m_instruction_cycle_count += m_cmos ? info->cmos_extra_cycle : 0;
@@ -195,6 +196,7 @@ void CPU6502::execute_instruction()
   }
   ++m_instruction_count;
   m_cycle_count += m_instruction_cycle_count;
+  return m_halt;
 }
 
 void CPU6502::execute_rts()
@@ -368,7 +370,7 @@ void CPU6502::halt(std::uint32_t address)
     std::uint8_t dnvzc = m_memory_sp->read_8(0x0005);
     std::cerr << std::format("DNVZC ^ EXP_P = 0x{:02x}\n", dnvzc ^ expected_p);
   }
-  std::exit(3);
+  m_halt = true;
 }
 
 
@@ -381,6 +383,7 @@ void CPU6502::branch(std::uint32_t address)
   }
   if (address == static_cast<std::uint32_t>(registers.pc - 2))
   {
+    std::cerr << "branch halt\n";
     halt(address);
   }
   registers.pc = address;

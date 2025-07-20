@@ -3,6 +3,7 @@
 // Copyright 2022-2025 Eric Smith
 // SPDX-License-Identifier: GPL-3.0-only
 
+#include <csignal>
 #include <cstdlib>
 #include <format>
 #include <initializer_list>
@@ -52,6 +53,24 @@ enum class ExecutableFormat
   APEX_BIN,
   RAW_BINARY,
 };
+
+
+static CPU6502SP cpu_sp;
+
+
+void finish()
+{
+  std::cerr << "\n";
+  std::cerr << std::format("{} instructions executed\n", cpu_sp->get_instruction_count());
+  std::cerr << std::format("{} cycles\n",                cpu_sp->get_cycle_count());
+}
+
+
+void signal_handler(int signum)
+{
+  finish();
+  std::exit(signum);
+}
 
 
 int main(int argc, char *argv[])
@@ -170,8 +189,8 @@ int main(int argc, char *argv[])
   }
 
   MemorySP memory_sp = Memory::create(1ull<<16);
-  CPU6502SP cpu_sp = CPU6502::create(instruction_sets,
-				     memory_sp);
+  cpu_sp = CPU6502::create(instruction_sets,
+			   memory_sp);
 
   ApexSP apex_sp = Apex::create(memory_sp);
 
@@ -228,19 +247,33 @@ int main(int argc, char *argv[])
   cpu_sp->set_trace(false);
   memory_sp->set_trace(false);
 
-  while (true)
+  std::signal(SIGINT, signal_handler);
+
+  bool run = true;
+  while (run)
   {
+    bool halt;
     if ((cpu_sp->registers.pc >= Apex::VECTOR_START) &&
 	(cpu_sp->registers.pc < Apex::VECTOR_END))
     {
-      apex_sp->vector_exec(cpu_sp->registers);
+      halt = apex_sp->vector_exec(cpu_sp->registers);
       cpu_sp->execute_rts();
+      if (halt)
+      {
+	std::cout << "apex halt\n";
+      }
     }
     else
     {
-      cpu_sp->execute_instruction();
+      halt = cpu_sp->execute_instruction();
+      if (halt)
+      {
+	std::cout << "cpu halt\n";
+      }
     }
+    run &= ! halt;
   }
 
+  finish();
   return 0;
 }
