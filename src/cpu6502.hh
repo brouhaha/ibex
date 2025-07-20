@@ -93,6 +93,8 @@ public:
 
   void set_trace(bool value);
 
+  void trace_registers();
+
   // returns false unless halts (tight loop branch or jump),
   // or tries to execute an undefined opcode
   bool execute_instruction();

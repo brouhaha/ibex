@@ -160,6 +160,15 @@ void CPU6502::go_vector(Vector vector, bool brk)
 
 using enum InstructionSet::Mode;
 
+void CPU6502::trace_registers()
+{
+  if (! m_trace)
+  {
+    return;
+  }
+  std::cout << std::format("--- cycle {}, ", m_cycle_count) << registers << "\n";
+}
+
 bool CPU6502::execute_instruction()
 {
   std::uint8_t opcode = m_memory_sp->read_8(registers.pc);
@@ -180,7 +189,7 @@ bool CPU6502::execute_instruction()
       m_memory_sp->read_8(registers.pc + 1),
       m_memory_sp->read_8(registers.pc + 2),
     };
-    if (false)
+    if (true)
     {
       std::cout << std::format("*** {:04x} {}\n", registers.pc, m_instruction_set_sp->disassemble(registers.pc, bytes));
     }
@@ -190,22 +199,16 @@ bool CPU6502::execute_instruction()
   std::uint32_t ea2;
   compute_effective_address(info, ea1, ea2);
   (this->*s_execute_inst_fn_ptrs[info->inst])(info, ea1, ea2);
-  if (m_trace)
-  {
-    std::cout << "--- " << registers << "\n";
-  }
   ++m_instruction_count;
   m_cycle_count += m_instruction_cycle_count;
+  trace_registers();
   return m_halt;
 }
 
 void CPU6502::execute_rts()
 {
   execute_RTS(nullptr, 0, 0);
-  if (m_trace)
-  {
-    std::cout << "--- " << registers << "\n";
-  }
+  trace_registers();
 }
 
 void CPU6502::compute_effective_address(const InstructionSet::Info* info,
