@@ -102,6 +102,9 @@ public:
     std::uint8_t opcode;
     std::uint8_t base_cycle_count;  // plus addrssing mode, page crossing, branch taken
     bool page_crossing_extra_cycle: 1;
+    bool nmos_extra_cycle_forced:   1; // NMOS always takes the extra cycle on
+                                       // indexed RMW instructions, whether there's
+                                       // a page crossing or not
     bool cmos_extra_cycle:          1; // 65C02 adds cycle to fix JMP (ABS) bug
   };
 

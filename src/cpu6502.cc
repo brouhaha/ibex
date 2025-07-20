@@ -265,7 +265,8 @@ void CPU6502::compute_effective_address(const InstructionSet::Info* info,
     temp1 = m_memory_sp->read_16_le(registers.pc);
     registers.pc += 2;
     ea1 = temp1 + registers.x;
-    if (info->page_crossing_extra_cycle && ((ea1 & 0xff00) != (temp1 & 0xff00)))
+    if (((! m_cmos) && info->nmos_extra_cycle_forced) ||
+	(info->page_crossing_extra_cycle && ((ea1 & 0xff00) != (temp1 & 0xff00))))
     {
       ++m_instruction_cycle_count;
     }
