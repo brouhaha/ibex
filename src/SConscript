@@ -4,10 +4,38 @@
 from dataclasses import dataclass, field
 from typing import Optional
 
-Import('env')
+use_clang = False
 
 OPTIMIZE = True
 DEBUG = False
+
+Import('env')
+
+target = env['target']
+
+if target == 'win32':
+    env['CC'] = 'i686-w64-mingw32-gcc'
+    env['CXX'] = 'i686-w64-mingw32-g++'
+    env.Append(CPPPATH = '#magic_enum')
+    env.Append(LIBS = 'boost_program_options-x32')
+    env['PROGSUFFIX'] = '.exe'
+    env['OBJSUFFIX'] = '.obj'
+    env['LINKFLAGS'] = '-Wl,--subsystem,console'
+    env['DLLPATH'] = ['/usr/i686-w64-mingw32/sys-root/mingw/bin',
+                      '/usr/i686-w64-mingw32/sys-root/mingw/lib']
+elif target == 'win64':
+    env['CC'] = 'x86_64-w64-mingw32-gcc'
+    env['CXX'] = 'x86_64-w64-mingw32-g++'
+    env.Append(CPPPATH = '#magic_enum')
+    env.Append(LIBS = 'boost_program_options-x64')
+    env['PROGSUFFIX'] = '.exe'
+    env['OBJSUFFIX'] = '.obj'
+    env['LINKFLAGS'] = '-Wl,--subsystem,console'
+    env['DLLPATH'] = ['/usr/x86_64-w64-mingw32/sys-root/mingw/bin',
+                      '/usr/x86_64-w64-mingw32/sys-root/mingw/lib']
+else:
+    env.Append(LIBS = ['boost_program_options'])
+
 
 cxxflags = ['--std=c++23', '-Wall', '-Wextra', '-Werror', '-pedantic', '-g']
 if OPTIMIZE:
@@ -17,15 +45,14 @@ if DEBUG:
 
 env.Append(CXXFLAGS = cxxflags)
 
-libs = ['boost_program_options']
 
-env.Append(LIBS = libs)
 
 
 @dataclass
 class ProgInfo:
     name: str
     srcs: list[str]
+
 
 def build_prog(prog_info):
     objs = [env.Object(src)[0] for src in prog_info.srcs]
@@ -44,9 +71,46 @@ prog_infos = [ProgInfo('ibex',
                         'utility.cc',
                         'memory.cc'])]
 
-progs = [build_prog(prog_info) for prog_info in prog_infos]
+executables = [build_prog(prog_info) for prog_info in prog_infos]
 
-env.Default(progs)
+env.Default(executables)
+
+
+#-----------------------------------------------------------------------------
+# Windows installer
+#-----------------------------------------------------------------------------
+
+if target in ['win32', 'win64']:
+    win_tools = ['wxs', 'msi']
+    for win_tool in win_tools:
+        env.Tool(win_tool, toolpath = ['#scons'])
+    other_dlls = []
+    package_files = executables
+
+    dll_search_path = { 'win32': ['/usr/i686-w64-mingw32/sys-root/mingw'],
+                        'win64': ['/usr/x86_64-w64-mingw32/sys-root/mingw'] }
+
+    installer_base_name = 'ibex-' + target
+
+    wxs_template_filename = 'ibex.wxst'
+    wxs_filename = installer_base_name + '.wxs'
+    msi_filename = installer_base_name + '.msi'
+
+    wxs_template = env.File(wxs_template_filename)
+
+    package_files.append(wxs_template)
+    
+    wxs_file = env.WXS(target = wxs_filename,
+                       source = package_files,
+                       DLL_SEARCH_PATH = dll_search_path[target],
+                       OTHER_DLLS = other_dlls)
+
+    Default(wxs_file)
+
+    msi_file = env.MSI(target = msi_filename,
+                       source = wxs_file)
+
+    Default(msi_file)
 
 # Local Variables:
 # mode: python

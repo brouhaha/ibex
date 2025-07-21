@@ -53,7 +53,15 @@ which requires
 To build ibex, make sure the Magic Enum headers are in
 your system include path, per their documentation. From the top level
 directory (above the "src" directory), type "scons". The resulting
-executable will be build/ibex.
+executable will be build/posix/ibex.
+
+## Cross-compiling ibex for Windows
+
+ibex can be cross-compiled on a Linux host for execution on Windows (32-bit and 64-bit).
+Use a "target=win32" or "target=win64" option on the SCons command line. If the
+target isn't specified, it defaults to the most recent target that was specified.
+The exeuctable, and a .msi installer, will be found in build/win32 or build/win64,
+as appropriate.
 
 ## Running ibex
 
