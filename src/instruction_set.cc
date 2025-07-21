@@ -475,7 +475,8 @@ std::shared_ptr<InstructionSet> InstructionSet::create(const Sets& sets)
 }
 
 InstructionSet::InstructionSet(const Sets& sets):
-  m_sets(sets)
+  m_sets(sets),
+  m_by_opcode { nullptr }
 {
   for (const auto& info: s_main_table)
   {
