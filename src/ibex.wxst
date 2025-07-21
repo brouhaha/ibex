@@ -5,8 +5,8 @@ SPDX-License-Identifier: GPL-3.0-only
 -->
 
 <Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
-  <Product Name='Nonpareil II'
-	   Manufacturer='Nybble Forge'
+  <Product Name='Ibex'
+	   Manufacturer='brouhaha.com'
 	   Id="*"
 	   UpgradeCode='4cb1d47e-2bad-434d-b68b-47c07cc34b21'
 	   Language='1033'
@@ -17,29 +17,29 @@ SPDX-License-Identifier: GPL-3.0-only
 
     <Package Id='*'
     	     Keywords='Installer'
-	     Description="Nonpareil II Installer"
+	     Description="Ibex Installer"
 	     Comments='no comment'
-	     Manufacturer='Nybble Forge'
+	     Manufacturer='brouhaha.com'
 	     InstallerVersion='100'
 	     Languages='1033'
 	     SummaryCodepage='1252'
 	     Compressed='yes' />
 
     <Media Id='1'
-	   Cabinet='nonpareil2.cab'
+	   Cabinet='ibex.cab'
 	   EmbedCab='yes'
 	   DiskPrompt="CD-ROM #1" />
     <Property Id='DiskPrompt'
-	      Value="Nonpareil II Installation [1]" />
+	      Value="Ibex Installation [1]" />
 
     <Directory Id='TARGETDIR' Name='SourceDir'>
       <Directory Id='ProgramFilesFolder' Name='PFiles'>
-        <Directory Id='INSTALLDIR' Name='Nonpareil II'>
+        <Directory Id='INSTALLDIR' Name='Ibex'>
 	  <Directory Id='qt-platforms-dir' Name='platforms'/>
         </Directory>
       </Directory>
       <Directory Id="ProgramMenuFolder" Name="Programs">
-	<Directory Id="ProgramMenuNonpareilIIFolder" Name="Nonpareil II"/>>
+	<Directory Id="ProgramMenuIbexFolder" Name="Ibex"/>>
       </Directory>
     </Directory>
 
@@ -49,36 +49,18 @@ SPDX-License-Identifier: GPL-3.0-only
     <DirectoryRef Id="qt-platforms-dir">
     </DirectoryRef>
 
-    <DirectoryRef Id="ProgramMenuNonpareilIIFolder">
-      <Component Id="ApplicationShortcuts" Guid="345daee1-2909-4dc8-862e-83853904426b">
-	<Shortcut Id="ApplicationStartMenuShortcut15C"
-		  Name="Nonpareil II - 15C"
-		  Description="Nonpareil microcode-level calculator simulator"
-		  Target="[#nonpareil2.exe]"
+    <DirectoryRef Id="ProgramMenuIbexFolder">
+      <Component Id="ApplicationShortcuts" Guid="7787df96-a1f6-415b-ad07-d0228d3caa15">
+	<Shortcut Id="ApplicationStartMenuShortcut"
+		  Name="Ibex"
+		  Description="Ibex 6502 and Apex simulator"
+		  Target="[#ibex.exe]"
 		  WorkingDirectory="INSTALLDIR"
 		  Arguments="15c"/>
-	<Shortcut Id="ApplicationStartMenuShortcut16C"
-		  Name="Nonpareil II - 16C"
-		  Description="Nonpareil microcode-level calculator simulator"
-		  Target="[#nonpareil2.exe]"
-		  WorkingDirectory="INSTALLDIR"
-		  Arguments="16c"/>
-	<Shortcut Id="ApplicationStartMenuShortcut25"
-		  Name="Nonpareil II - 25"
-		  Description="Nonpareil microcode-level calculator simulator"
-		  Target="[#nonpareil2.exe]"
-		  WorkingDirectory="INSTALLDIR"
-		  Arguments="25"/>
-	<Shortcut Id="ApplicationStartMenuShortcut25s2"
-		  Name="Nonpareil II - 25 (2x)"
-		  Description="Nonpareil microcode-level calculator simulator"
-		  Target="[#nonpareil2.exe]"
-		  WorkingDirectory="INSTALLDIR"
-		  Arguments="--scale 2 25"/>
 	<RemoveFolder Id="ApplicationProgramsFolder"
 		      On="uninstall"/>
 	<RegistryKey Root="HKCU"
-		     Key="Software\NybbleForge\NonpareilII">
+		     Key="Software\brouhaha.com\Ibex">
 	  <RegistryValue Name="installed"
 			 Type="integer"
 			 Value="1"

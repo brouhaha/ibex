@@ -8,6 +8,7 @@ use_clang = False
 
 OPTIMIZE = True
 DEBUG = False
+STRIP = True
 
 Import('env')
 
@@ -20,7 +21,9 @@ if target == 'win32':
     env.Append(LIBS = 'boost_program_options-x32')
     env['PROGSUFFIX'] = '.exe'
     env['OBJSUFFIX'] = '.obj'
-    env['LINKFLAGS'] = '-Wl,--subsystem,console'
+    env['LINKFLAGS'] = ['-Wl,--subsystem,console']
+    if STRIP:
+        env.Append(LINKFLAGS = ['-s'])
     env['DLLPATH'] = ['/usr/i686-w64-mingw32/sys-root/mingw/bin',
                       '/usr/i686-w64-mingw32/sys-root/mingw/lib']
 elif target == 'win64':
@@ -30,11 +33,15 @@ elif target == 'win64':
     env.Append(LIBS = 'boost_program_options-x64')
     env['PROGSUFFIX'] = '.exe'
     env['OBJSUFFIX'] = '.obj'
-    env['LINKFLAGS'] = '-Wl,--subsystem,console'
+    env['LINKFLAGS'] = ['-Wl,--subsystem,console']
+    if STRIP:
+        env.Append(LINKFLAGS = ['-s'])
     env['DLLPATH'] = ['/usr/x86_64-w64-mingw32/sys-root/mingw/bin',
                       '/usr/x86_64-w64-mingw32/sys-root/mingw/lib']
 else:
     env.Append(LIBS = ['boost_program_options'])
+    if STRIP:
+        env.Append(LINKFLAGS = '-s')
 
 
 cxxflags = ['--std=c++23', '-Wall', '-Wextra', '-Werror', '-pedantic', '-g']
