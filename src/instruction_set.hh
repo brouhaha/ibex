@@ -24,21 +24,21 @@ public:
   {
     UNDEFINED,
     BASE,
-    ROCKWELL,  // use with BASE - present on some Rockwell NMOS microcontrollers, e.g. R6500/13, R6511Q
-    CMOS,      // use with BASE
-    WDC_CMOS,  // use with BASE | CMOS | ROCKWELL
-    WDC_16BIT, // use with BASE | CMOS
-    CBM_CMOS,  // use with BASE | CMOS | ROCKWELL
+    ROCKWELL_BIT, // use with BASE - present on some Rockwell NMOS microcontrollers, e.g. R6500/13, R6511Q
+    CMOS,         // use with BASE
+    WDC_CMOS,     // use with BASE | CMOS | ROCKWELL_BIT
+    WDC_16_BIT,   // use with BASE | CMOS
+    CBM_65CE02,   // use with BASE | CMOS | ROCKWELL_BIT
   };
   using Sets = magic_enum::containers::bitset<Set>;
 
   static constexpr Sets CPU_6502      = Sets({ Set::BASE });
-  static constexpr Sets CPU_R6502     = Sets({ Set::BASE,            Set::ROCKWELL });
+  static constexpr Sets CPU_R6502     = Sets({ Set::BASE,            Set::ROCKWELL_BIT });
   static constexpr Sets CPU_65C02     = Sets({ Set::BASE, Set::CMOS });
-  static constexpr Sets CPU_R65C02    = Sets({ Set::BASE, Set::CMOS, Set::ROCKWELL });
-  static constexpr Sets CPU_WDC65C02  = Sets({ Set::BASE, Set::CMOS, Set::ROCKWELL, Set::WDC_CMOS });
-  static constexpr Sets CPU_WDC65C816 = Sets({ Set::BASE, Set::CMOS,                Set::WDC_CMOS, Set::WDC_16BIT });
-  static constexpr Sets CPU_65CE02    = Sets({ Set::BASE, Set::CMOS, Set::ROCKWELL,                                Set::CBM_CMOS });
+  static constexpr Sets CPU_R65C02    = Sets({ Set::BASE, Set::CMOS, Set::ROCKWELL_BIT });
+  static constexpr Sets CPU_WDC65C02  = Sets({ Set::BASE, Set::CMOS, Set::ROCKWELL_BIT, Set::WDC_CMOS });
+  static constexpr Sets CPU_WDC65C816 = Sets({ Set::BASE, Set::CMOS,                    Set::WDC_CMOS, Set::WDC_16_BIT });
+  static constexpr Sets CPU_65CE02    = Sets({ Set::BASE, Set::CMOS, Set::ROCKWELL_BIT,                                 Set::CBM_65CE02 });
 
   static std::shared_ptr<InstructionSet> create(const Sets& sets = { Set::BASE });
 
@@ -50,30 +50,24 @@ public:
 
   enum class Inst
   {
-    ADC,  AND,  ASL,  ASR,  ASW,  AUG,
-    BBR0, BBR1, BBR2, BBR3, BBR4, BBR5, BBR6, BBR7,
-    BBS0, BBS1, BBS2, BBS3, BBS4, BBS5, BBS6, BBS7,
-    BCC,  BCS,  BEQ,  BIT,  BMI,  BNE,  BPL,  BRA,
-    BRK,  BSR,  BVC,  BVS,  CLC,  CLD,  CLE,  CLI,
-    CLV,  CMP,  CPX,  CPY,  CPZ,  DEC,  DEW,  DEX,
-    DEY,  DEZ,  EOR,  INC,  INW,  INX,  INY,  INZ,
-    JMP,  JSR,  LDA,  LDX,  LDY,  LDZ,  LSR,  NEG,
-    NOP,  ORA,  PHA,  PHP,  PHW,  PHX,  PHY,  PHZ,
-    PLA,  PLP,  PLW,  PLX,  PLY,  PLZ,
-    RMB0, RMB1, RMB2, RMB3, RMB4, RMB5, RMB6, RMB7,
-    ROL,  ROR,  ROW,  RTI,  RTN,  RTS,  SBC,  SEC,
-    SED,  SEE,  SEI,
-    SMB0, SMB1, SMB2, SMB3, SMB4, SMB5, SMB6, SMB7,
-    STA,  STP,  STX,  STY,  STZ,  TAB,  TAX,  TAY,
-    TAZ,  TBA,  TRB,  TSB,  TSX,  TSY,  TXA,  TXS,
-    TYA,  TYS,  TZA,  WAI,
+    /* 000-009 */ ADC,  AND,  ASL,  ASR,  ASW,  AUG,  BBR,  BBS,  BCC,  BCS,
+    /* 010-019 */ BEQ,  BIT,  BMI,  BNE,  BPL,  BRA,  BRK,  BRL,  BSR,  BVC,
+    /* 020-029 */ BVS,  CLC,  CLD,  CLE,  CLI,  CLV,  CMP,  COP,  CPX,  CPY,
+    /* 030-039 */ CPZ,  DEC,  DEW,  DEX,  DEY,  DEZ,  EOR,  INC,  INW,  INX,
+    /* 040-049 */ INY,  INZ,  JML,  JMP,  JSL,  JSR,  LDA,  LDX,  LDY,  LDZ,
+    /* 050-059 */ LSR,  MVN,  MVP,  NEG,  NOP,  ORA,  PEA,  PEI,  PER,  PHA,
+    /* 060-069 */ PHB,  PHD,  PHK,  PHP,  PHW,  PHX,  PHY,  PHZ,  PLA,  PLB,
+    /* 070-079 */ PLD,  PLP,  PLW,  PLX,  PLY,  PLZ,  REP,  RMB,  ROL,  ROR,
+    /* 080-089 */ ROW,  RTI,  RTL,  RTN,  RTS,  SBC,  SEC,  SED,  SEE,  SEI,
+    /* 090-099 */ SEP,  SMB,  STA,  STP,  STX,  STY,  STZ,  TAB,  TAX,  TAY,
+    /* 100-109 */ TAZ,  TBA,  TCD,  TCS,  TDC,  TRB,  TSB,  TSX,  TSY,  TXA,
+    /* 110-118 */ TXS,  TYA,  TYS,  TYX,  TZA,  WAI,  WDM,  XBA,  XCE,
   };
-
 
   enum class Mode
   {
     // real modes
-    IMPLIED,
+    IMPLIED,        // includes WDC's "stack" mode
     ACCUMULATOR,
     IMMEDIATE,
     ZERO_PAGE,
@@ -89,8 +83,14 @@ public:
     ABS_X_IND,      // CMOS
     RELATIVE,
     ZP_RELATIVE,    // Rockwell BBR, BBS
-    RELATIVE_16,    // Commodore 65CE02
-    ST_VEC_IND_Y,   // Commodore 65CE02
+    ZP_IND_LONG,    // WDC 65C816
+    ZP_IND_LONG_Y,  // WDC 65C816
+    ABS_LONG,       // WDC 65C816
+    ABS_LONG_X,     // WDC 65C816
+    ST_REL,         // WDC 65C816
+    ST_REL_IND_Y,   // WDC 65C816
+    RELATIVE_16,    // WDC 65C816, Commodore 65CE02
+    ST_VEC_IND_Y,   // Commodore 65CE02 - XXX is this same as WDC ST_REL_IND_Y?
   };
 
   struct Info
