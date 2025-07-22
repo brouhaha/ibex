@@ -39,7 +39,8 @@ static constexpr unsigned DATA_HEX_DIGITS = 2;
 void Memory::load_raw_bin(const std::filesystem::path& object_filename,
 			  Address load_address)
 {
-  std::ifstream object_file(object_filename);
+  std::ifstream object_file(object_filename,
+			    std::ios_base::in | std::ios_base::binary);
   if (! object_file.is_open())
   {
     throw std::runtime_error("can't open object file");
@@ -57,8 +58,9 @@ void Memory::load_raw_bin(const std::filesystem::path& object_filename,
     {
       throw std::runtime_error("error reading object file");
     }
+    std::uint8_t uc = static_cast<std::uint8_t>(c);
+    m_memory.at(load_address++) = uc;
     length++;
-    m_memory.at(load_address++) = static_cast<std::uint8_t>(c);
   }
   
   std::cerr << std::format("loaded {} (0x{:04x}) bytes\n", length, length);
