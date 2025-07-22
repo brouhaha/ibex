@@ -53,8 +53,6 @@ if DEBUG:
 env.Append(CXXFLAGS = cxxflags)
 
 
-
-
 @dataclass
 class ProgInfo:
     name: str
@@ -84,11 +82,11 @@ env.Default(executables)
 
 
 #-----------------------------------------------------------------------------
-# Windows installer
+# Windows package
 #-----------------------------------------------------------------------------
 
 if target in ['win32', 'win64']:
-    win_tools = ['wxs', 'msi', 'dzip']
+    win_tools = ['dzip']
     for win_tool in win_tools:
         env.Tool(win_tool)
     other_dlls = []
@@ -97,40 +95,14 @@ if target in ['win32', 'win64']:
     dll_search_path = { 'win32': ['/usr/i686-w64-mingw32/sys-root/mingw'],
                         'win64': ['/usr/x86_64-w64-mingw32/sys-root/mingw'] }
 
-    packaged_name = 'ibex-' + target
-
-    wxs_template_filename = 'ibex.wxst'
-    wxs_template = env.File(wxs_template_filename)
-    wxs_file = env.WXS(target = packaged_name + '.wxs',
-                       source = [wxs_template] + package_files,
-                       DLL_SEARCH_PATH = dll_search_path[target],
-                       OTHER_DLLS = other_dlls)
-    env.Default(wxs_file)
-
-    msi_file = env.MSI(target = packaged_name + '.msi',
-                       source = wxs_file)
-    env.Default(msi_file)
+    app_metadata = env['app_metadata']
+    packaged_name = 'ibex-' + target + '-' + app_metadata['version'] + '-' + app_metadata['release_type']
 
     zip_file = env.DZIP(target = packaged_name + '.zip',
                         source = package_files,
                         DLL_SEARCH_PATH = dll_search_path[target],
                         OTHER_DLLS = other_dlls)
     env.Default(zip_file)
-
-    if False:
-        from dll_finder import DllFinder
-
-        pe_files = [f.get_abspath() for f in executables]
-        dll_finder = DllFinder(pe_fns = pe_files + other_dlls,
-                               dll_search_path = dll_search_path[target])
-        dll_files = dll_finder.recursive_get_dlls()
-        dll_paths = [v for v in dll_files.values()]
-
-        zip_filename = base_name + '.zip'
-        zip_file = env.Zip(target = zip_filename,
-                           source = package_files + dll_paths)
-
-        env.Default(zip_file)
 
 # Local Variables:
 # mode: python

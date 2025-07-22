@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<!--
+Copyright 2025 Eric Smith
+-->
+
+<metadata xmln="http://ibex.brouhaha.com/xmlns/metadata">
+  <name>ibex</name>
+  <version major="0" minor="1"/>
+  <release_type>Preview</release_type>
+</metadata>

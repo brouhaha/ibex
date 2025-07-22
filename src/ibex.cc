@@ -17,6 +17,7 @@
 #include "apex_console_device.hh"
 #include "apex_printer_device.hh"
 #include "apex_file_byte_device.hh"
+#include "app_metadata.hh"
 #include "cpu6502.hh"
 #include "elapsed_time.hh"
 #include "instruction_set.hh"
@@ -75,7 +76,7 @@ void finish()
 
   double elapsed_time_seconds = elapsed_time.get_elapsed_time_seconds();
 
-  std::cout << "elapsed time (s): " << elapsed_time_seconds << "\n";
+  std::cerr << "elapsed time (s): " << elapsed_time_seconds << "\n";
 
   std::uint64_t instruction_count = cpu_sp->get_instruction_count();
   std::cerr << std::format("{} instructions executed\n", instruction_count);
@@ -98,6 +99,8 @@ void signal_handler(int signum)
 
 int main(int argc, char *argv[])
 {
+  std::cerr << std::format("{}-{}-{}\n", name, app_version_string, release_type_string);
+
   InstructionSet::Sets instruction_sets;
   bool cmos;
 
@@ -158,8 +161,8 @@ int main(int argc, char *argv[])
 
     if (vm.count("help"))
     {
-      std::cout << "Usage: " << argv[0] << " [options]\n\n";
-      std::cout << gen_opts << "\n";
+      std::cerr << "Usage: " << argv[0] << " [options]\n\n";
+      std::cerr << gen_opts << "\n";
       std::exit(0);
     }
 
@@ -182,7 +185,7 @@ int main(int argc, char *argv[])
 
     if (vm.count("executable") != 1)
     {
-      std::cout << "executable file must be specified\n";
+      std::cerr << "executable file must be specified\n";
       std::exit(1);
     }
 
@@ -295,7 +298,7 @@ int main(int argc, char *argv[])
       cpu_sp->execute_rts();
       if (halt)
       {
-	std::cout << "apex halt\n";
+	std::cerr << "apex halt\n";
       }
     }
     else
@@ -303,7 +306,7 @@ int main(int argc, char *argv[])
       halt = cpu_sp->execute_instruction();
       if (halt)
       {
-	std::cout << "cpu halt\n";
+	std::cerr << "cpu halt\n";
       }
     }
     run &= ! halt;

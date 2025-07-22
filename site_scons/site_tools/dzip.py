@@ -31,10 +31,12 @@ def dzip_action(target, source, env):
 
     zip_path = target[0].get_abspath()
     z = zipfile.ZipFile(zip_path, 'w')
-    dir_name = 'ibex'
+    dir_name = os.path.basename(zip_path)
+    if dir_name.endswith('.zip'):
+        dir_name = dir_name[:-4]
     z.mkdir(dir_name)
     for f in files:
-        z.write(f, dir_name + '/' + os.path.split(f)[1])
+        z.write(f, dir_name + '/' + os.path.basename(f))
 
 dzip_builder = SCons.Builder.Builder(action = dzip_action,
                                     suffix = '.zip')
