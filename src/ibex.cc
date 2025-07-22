@@ -58,12 +58,32 @@ enum class ExecutableFormat
 };
 
 
+static bool stats_requested = false;
 static std::string memory_dump_fn;
 static MemorySP memory_sp;
 static CPU6502SP cpu_sp;
 
 static ElapsedTime elapsed_time;
 
+
+std::ostream& stats(std::ostream& os)
+{
+  double elapsed_time_seconds = elapsed_time.get_elapsed_time_seconds();
+
+  os << "elapsed time (s): " << elapsed_time_seconds << "\n";
+
+  std::uint64_t instruction_count = cpu_sp->get_instruction_count();
+  os << std::format("{} instructions executed\n", instruction_count);
+  os << std::format("{} instructions executed per second\n", instruction_count / elapsed_time_seconds);
+  
+  std::uint64_t cycle_count = cpu_sp->get_cycle_count();
+  os << std::format("{} cycles executed\n", cycle_count);
+  os << std::format("{} cycles executed per second/s\n", cycle_count / elapsed_time_seconds);
+
+  os << std::format("average clocks per instruction: {}\n", ((double) cycle_count) / ((double) instruction_count));
+
+  return os;
+}
 
 void finish()
 {
@@ -73,20 +93,10 @@ void finish()
   {
     memory_sp->dump_raw_bin(memory_dump_fn);
   }
-
-  double elapsed_time_seconds = elapsed_time.get_elapsed_time_seconds();
-
-  std::cerr << "elapsed time (s): " << elapsed_time_seconds << "\n";
-
-  std::uint64_t instruction_count = cpu_sp->get_instruction_count();
-  std::cerr << std::format("{} instructions executed\n", instruction_count);
-  std::cerr << std::format("{} instructions executed per second\n", instruction_count / elapsed_time_seconds);
-  
-  std::uint64_t cycle_count = cpu_sp->get_cycle_count();
-  std::cerr << std::format("{} cycles executed\n", cycle_count);
-  std::cerr << std::format("{} cycles executed per second/s\n", cycle_count / elapsed_time_seconds);
-
-  std::cerr << std::format("average clocks per instruction: {}\n", ((double) cycle_count) / ((double) instruction_count));
+  if (stats_requested)
+  {
+    stats(std::cerr);
+  }
 }
 
 
@@ -135,12 +145,12 @@ int main(int argc, char *argv[])
       ("raw,r",                                          "executable is a raw binary file")
       ("input,i",   po::value<std::string>(&input_fn),   "input file")
       ("output,o",  po::value<std::string>(&output_fn),  "output file")
-      ("printer,p", po::value<std::string>(&printer_fn), "printer file");
+      ("printer,p", po::value<std::string>(&printer_fn), "printer file")
+      ("stats,s",                                        "print statistics");
 
     po::options_description hidden_opts("Hidden options:");
     hidden_opts.add_options()
       ("executable", po::value<std::string>(&executable_fn),  "executable filename")
-
       ("trace,t",                                             "trace execution")
       ("memtrace",                                            "trace memory")
       ("dump",       po::value<std::string>(&memory_dump_fn), "memory dump filename")
@@ -168,6 +178,8 @@ int main(int argc, char *argv[])
 
     cmos = vm.count("cmos") != 0;
     instruction_sets = cmos ? InstructionSet::CPU_R65C02 : InstructionSet::CPU_6502;
+
+    stats_requested = vm.count("stats");
 
     if (vm.count("hextable"))
     {
