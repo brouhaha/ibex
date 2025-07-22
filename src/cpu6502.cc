@@ -154,8 +154,11 @@ void CPU6502::go_vector(Vector vector, bool brk)
     registers.set_d(false);
   }
   std::uint16_t addr = magic_enum::enum_integer(vector);
-  registers.pc = m_memory_sp->read_8(addr);
-  registers.pc |= (m_memory_sp->read_8(addr + 1) << 8);
+  registers.pc = m_memory_sp->read_16_le(addr);
+  if (registers.pc == 0x0000)
+  {
+    m_halt = true;
+  }
 }
 
 using enum InstructionSet::Mode;
