@@ -135,7 +135,8 @@ void Memory::load_apex_bin(const std::filesystem::path& object_filename)
 
 void Memory::load_apex_sav(const std::filesystem::path& save_filename)
 {
-  std::ifstream save_file(save_filename);
+  std::ifstream save_file(save_filename,
+			  std::ios_base::in | std::ios_base::binary);
   if (! save_file.is_open())
   {
     throw std::runtime_error("can't open Apex SAV file");
