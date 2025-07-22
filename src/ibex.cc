@@ -101,6 +101,9 @@ int main(int argc, char *argv[])
   InstructionSet::Sets instruction_sets;
   bool cmos;
 
+  bool trace = false;
+  bool mem_trace = false;
+
   bool print_opcode_matrix = false;
   bool print_detail = false;
   bool print_summary_table = false;
@@ -134,6 +137,9 @@ int main(int argc, char *argv[])
     po::options_description hidden_opts("Hidden options:");
     hidden_opts.add_options()
       ("executable", po::value<std::string>(&executable_fn),  "executable filename")
+
+      ("trace,t",                                             "trace execution")
+      ("memtrace",                                            "trace memory")
       ("dump",       po::value<std::string>(&memory_dump_fn), "memory dump filename")
       ("hextable",                                            "print hex table")
       ("hextabledetail",                                      "print hex table with detail")
@@ -179,6 +185,9 @@ int main(int argc, char *argv[])
       std::cout << "executable file must be specified\n";
       std::exit(1);
     }
+
+    trace = vm.count("trace");
+    mem_trace = vm.count("memtrace");
 
     if (vm.count("raw"))
     {
@@ -268,8 +277,8 @@ int main(int argc, char *argv[])
   cpu_sp->registers.s = 0xff;
   cpu_sp->registers.p = 0x34;
 
-  cpu_sp->set_trace(false);
-  memory_sp->set_trace(false);
+  cpu_sp->set_trace(trace);
+  memory_sp->set_trace(mem_trace);
 
   std::signal(SIGINT, signal_handler);
 
