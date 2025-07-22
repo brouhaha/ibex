@@ -17,7 +17,7 @@ target = env['target']
 if target == 'win32':
     env['CC'] = 'i686-w64-mingw32-gcc'
     env['CXX'] = 'i686-w64-mingw32-g++'
-    env.Append(CPPPATH = '#magic_enum')
+    env.Append(CPPPATH = ['#magic_enum'])
     env.Append(LIBS = 'boost_program_options-x32')
     env['PROGSUFFIX'] = '.exe'
     env['OBJSUFFIX'] = '.obj'
@@ -29,7 +29,7 @@ if target == 'win32':
 elif target == 'win64':
     env['CC'] = 'x86_64-w64-mingw32-gcc'
     env['CXX'] = 'x86_64-w64-mingw32-g++'
-    env.Append(CPPPATH = '#magic_enum')
+    env.Append(CPPPATH = ['#magic_enum'])
     env.Append(LIBS = 'boost_program_options-x64')
     env['PROGSUFFIX'] = '.exe'
     env['OBJSUFFIX'] = '.obj'

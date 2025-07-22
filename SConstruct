@@ -55,7 +55,7 @@ Default(metadata_header)
 
 env['CROSS'] = (target == platform)
 
-env.Append(CPPPATH = build_dir)  # for auto-generated sources or headers
+env.Append(CPPPATH = [build_dir])  # for auto-generated sources or headers
 
 #-----------------------------------------------------------------------------
 # executables
